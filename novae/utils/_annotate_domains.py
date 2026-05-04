@@ -162,7 +162,6 @@ def _openai_api_request(
         "model": model,
         "messages": messages,
         "response_format": response_format,
-        "max_tokens": max_tokens,
     }
     if seed is not None:
         request_kwargs["seed"] = seed
