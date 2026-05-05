@@ -21,8 +21,8 @@ GENE_INFO = BLAMPEYQ / "gene_info.csv"
 
 PRIME_DATASET_PATH = PRIME / "data" / "spatial" / "spatial_transcriptomics"
 
-TRAINING_FILES = (
-    list(Path("/gpfs/workdir/blampeyq/novae/data").rglob("*.h5ad")) + list((PRIME_DATASET_PATH).glob("*.h5ad")),
+TRAINING_FILES = list(Path("/gpfs/workdir/blampeyq/novae/data").rglob("*.h5ad")) + list(
+    (PRIME_DATASET_PATH).glob("*.h5ad")
 )
 VALIDATION_FILES = list((PRIME_DATASET_PATH / "novae_validation").glob("*.h5ad"))
 
