@@ -11,7 +11,7 @@ from ...utils import repository_root
 log = logging.getLogger(__name__)
 
 
-def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) -> AnnData :
+def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) -> AnnData:
     from huggingface_hub import hf_hub_download
 
     file_path = f"{row['species']}/{row['tissue']}/{name}.h5ad"
@@ -23,8 +23,10 @@ def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) ->
         try:
             df_annot = pd.read_parquet(f"hf://datasets/MICS-Lab/novae/annotations/{name}.parquet")
             adata.obs[df_annot.columns] = df_annot
+        except FileNotFoundError:
+            log.warning(f"Annotations unavailable for {name}. They will not be added to the adata.obs.")
         except Exception as e:
-            log.warning(f"Failed to read annotations for {name} (likely because they don't exist): {e}")
+            log.warning(f"Failed to read annotations for {name}: {e}.")
 
     return adata
 
