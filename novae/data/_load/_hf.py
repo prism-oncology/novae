@@ -11,7 +11,7 @@ from ...utils import repository_root
 log = logging.getLogger(__name__)
 
 
-def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False):
+def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) -> AnnData :
     from huggingface_hub import hf_hub_download
 
     file_path = f"{row['species']}/{row['tissue']}/{name}.h5ad"
