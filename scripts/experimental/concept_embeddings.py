@@ -29,15 +29,19 @@ TRAINING_FILES = list(Path("/gpfs/workdir/blampeyq/novae/data").rglob("*.h5ad"))
 VALIDATION_FILES = list((PRIME_DATASET_PATH / "novae_validation").glob("*.h5ad"))
 
 concept = scConcept(cache_dir=BLAMPEYQ / ".cache")
-concept.load_config_and_model(model_name="corpus230M[human]-model170M")
+concept.load_config_and_model(model_name="corpus360M[multi-species]-model170M")
 
 
 def run_adata(adata: AnnData, name: str, res_path: Path) -> None:
     if "spatial" not in adata.obsm:
         adata.obsm["spatial"] = adata.obs[["center_x", "center_y"]].values
 
-    adata = add_gene_id(adata, name.lower())
-    adata.obsm["X_scConcept"] = concept.extract_embeddings(adata=adata, gene_id_column="gene_id")["cls_cell_emb"]
+    adata, species = add_gene_id(adata, name.lower())
+    adata.obsm["X_scConcept"] = concept.extract_embeddings(
+        adata=adata,
+        species=species,
+        gene_id_column="gene_id",
+    )["cls_cell_emb"]
 
     save_concept_embeddings(adata, name, res_path)
     save_umap(adata, name, "X_scConcept")
@@ -50,7 +54,7 @@ def save_umap(adata: AnnData, name: str, key: str) -> None:
     plt.savefig(UMAP_PATH / f"{name}_X_scConcept2.png", bbox_inches="tight")
 
 
-def add_gene_id(adata: AnnData, lower_name: str) -> AnnData:
+def add_gene_id(adata: AnnData, lower_name: str) -> tuple[AnnData, str]:
     valid_strings = ["mouse", "tgcrnd8", "mfemur", "wildtype"]
     is_mouse = any(s in lower_name for s in valid_strings)
     species = "mmusculus" if is_mouse else "hsapiens"
@@ -59,7 +63,7 @@ def add_gene_id(adata: AnnData, lower_name: str) -> AnnData:
 
     adata.var["gene_id"] = concept.map_gene_names_to_ids(species=species, gene_names=adata.var_names.tolist())
 
-    return adata
+    return adata, species
 
 
 def save_concept_embeddings(adata: AnnData, name: str, res_path: Path) -> None:
