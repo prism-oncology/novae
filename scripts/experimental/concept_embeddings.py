@@ -55,7 +55,7 @@ def save_umap(adata: AnnData, name: str, key: str) -> None:
 
 
 def add_gene_id(adata: AnnData, lower_name: str) -> tuple[AnnData, str]:
-    valid_strings = ["mouse", "tgcrnd8", "mfemur", "wildtype"]
+    valid_strings = ["mouse", "tgcrnd8", "mfemur", "wildtype", "msembryo"]
     is_mouse = any(s in lower_name for s in valid_strings)
     species = "mmusculus" if is_mouse else "hsapiens"
 
