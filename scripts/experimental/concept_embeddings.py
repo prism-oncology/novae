@@ -36,12 +36,8 @@ def run_adata(adata: AnnData, name: str, res_path: Path) -> None:
     if "spatial" not in adata.obsm:
         adata.obsm["spatial"] = adata.obs[["center_x", "center_y"]].values
 
-    adata, species = add_gene_id(adata, name.lower())
-    adata.obsm["X_scConcept"] = concept.extract_embeddings(
-        adata=adata,
-        species=species,
-        gene_id_column="gene_id",
-    )["cls_cell_emb"]
+    adata = add_gene_id(adata, name.lower())
+    adata.obsm["X_scConcept"] = concept.extract_embeddings(adata=adata, gene_id_column="gene_id")["cls_cell_emb"]
 
     save_concept_embeddings(adata, name, res_path)
     save_umap(adata, name, "X_scConcept")
@@ -54,7 +50,7 @@ def save_umap(adata: AnnData, name: str, key: str) -> None:
     plt.savefig(UMAP_PATH / f"{name}_X_scConcept2.png", bbox_inches="tight")
 
 
-def add_gene_id(adata: AnnData, lower_name: str) -> tuple[AnnData, str]:
+def add_gene_id(adata: AnnData, lower_name: str) -> AnnData:
     valid_strings = ["mouse", "tgcrnd8", "mfemur", "wildtype"]
     is_mouse = any(s in lower_name for s in valid_strings)
     species = "mmusculus" if is_mouse else "hsapiens"
@@ -63,7 +59,7 @@ def add_gene_id(adata: AnnData, lower_name: str) -> tuple[AnnData, str]:
 
     adata.var["gene_id"] = concept.map_gene_names_to_ids(species=species, gene_names=adata.var_names.tolist())
 
-    return adata, species
+    return adata
 
 
 def save_concept_embeddings(adata: AnnData, name: str, res_path: Path) -> None:
