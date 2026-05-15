@@ -60,6 +60,26 @@ def _format_domain_cell_percentages(adata: AnnData, obs_key: str, domain_ids: li
     return "Cell percentages by domain:\n" + "\n".join(lines)
 
 
+def _format_domain_cell_type_percentages(
+    cell_type_pct: pd.DataFrame | None,
+    domain_ids: list[int] | list[str],
+    top_k: int = 5,
+) -> str:
+    if cell_type_pct is None:
+        return ""
+
+    lines = []
+    for domain_id in domain_ids:
+        if domain_id not in cell_type_pct.index:
+            continue
+        row = cell_type_pct.loc[domain_id].sort_values(ascending=False)
+        row = row[row > 0].head(top_k)
+        values = ", ".join(f"{cell_type}={pct:.2%}" for cell_type, pct in row.items())
+        lines.append(f"Domain {domain_id}: {values}")
+
+    return "" if not lines else "Cell-type composition by domain:\n" + "\n".join(lines)
+
+
 def _markers_as_dict(adata: AnnData, obs_key: str, domain_ids: list, n_genes: int = 15):
     rank_genes_groups = adata.uns.get("rank_genes_groups")
     groupby = None if rank_genes_groups is None else rank_genes_groups.get("params", {}).get("groupby")
@@ -226,10 +246,25 @@ def _anthropic_api_request(
         raise RuntimeError(f"Anthropic API request failed: {e}") from e
 
 
+def _get_cell_type_pct(
+    adata: AnnData,
+    obs_key: str,
+    annotations: str,
+) -> pd.DataFrame:
+    if annotations not in adata.obs:
+        raise KeyError(f"`annotations` key '{annotations}' was not found in `adata.obs`.")
+
+    df = adata.obs[[obs_key, annotations]].copy()
+
+    # Normalize cell-type counts within each domain.
+    pct = pd.crosstab(df[obs_key], df[annotations], normalize="index")
+    return pct
+    
 def label_domains(
     adata: AnnData | None = None,
     pathways: dict[str, list[str]] | str | None = None,
     obs_key: str | None = None,
+    annotations: str | None = None,
     provider: str = "openai",
     model: str = "gpt-4.1",
     api_key: str | None = None,
@@ -247,6 +282,7 @@ def label_domains(
         adata: An `AnnData` object, or a list of `AnnData` objects. Optional if the model was initialized with `adata`.
         pathways: Either a dictionary of pathways (keys are pathway names, values are lists of gene names), or a path to a [GSEA](https://www.gsea-msigdb.org/gsea/msigdb/index.jsp) JSON file.
         obs_key: Key in `adata.obs` containing domain IDs to label. By default, it uses the last available Novae domain key.
+        annotations: Optional key in `adata.obs` containing cell type annotation labels. When provided, cell-type composition per domain is added to the LLM input.
         provider: LLM provider to use. Supported providers: 'openai', 'anthropic'.
         model: OpenAI model name used for labeling.
         api_key: OpenAI API key. If `None`, uses `OPENAI_API_KEY` from the environment.
@@ -281,7 +317,20 @@ def label_domains(
         else plot.pathway_scores(adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True)
     )
 
+    cell_type_pct = (
+        None
+        if annotations is None
+        else _get_cell_type_pct(adata, obs_key=obs_key, annotations=annotations)
+    )
+    input_cell_types = _format_domain_cell_type_percentages(cell_type_pct, domain_ids)
+
     input_pathway = _format_pathway_scores(pathway_scores, domain_ids)
+
+    prompt_sections = [input_markers, input_percentages]
+    if input_cell_types:
+        prompt_sections.append(input_cell_types)
+    if input_pathway:
+        prompt_sections.append(input_pathway)
 
     prompt = _create_prompt(species=species, tissue=tissue, spatial_context=spatial_context)
 
@@ -292,9 +341,7 @@ def label_domains(
         },
         {
             "role": "user",
-            "content": (
-                f"Annotate the following domains.\n\n{input_markers}\n\n{input_percentages}\n\n{input_pathway}"
-            ),
+            "content": "Annotate the following domains.\n\n" + "\n\n".join(prompt_sections),
         },
     ]
 
