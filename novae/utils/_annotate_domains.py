@@ -259,7 +259,8 @@ def _get_cell_type_pct(
     # Normalize cell-type counts within each domain.
     pct = pd.crosstab(df[obs_key], df[annotations], normalize="index")
     return pct
-    
+
+
 def label_domains(
     adata: AnnData | None = None,
     pathways: dict[str, list[str]] | str | None = None,
@@ -300,7 +301,7 @@ def label_domains(
 
     obs_key = utils.check_available_domains_key([adata], obs_key)
 
-    domain_ids = adata.obs[obs_key].cat.categories
+    domain_ids = pd.Index(pd.unique(adata.obs[obs_key].dropna()))
 
     gene_marker_dict = _markers_as_dict(adata, obs_key, domain_ids, n_genes)
 
@@ -317,11 +318,7 @@ def label_domains(
         else plot.pathway_scores(adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True)
     )
 
-    cell_type_pct = (
-        None
-        if annotations is None
-        else _get_cell_type_pct(adata, obs_key=obs_key, annotations=annotations)
-    )
+    cell_type_pct = None if annotations is None else _get_cell_type_pct(adata, obs_key=obs_key, annotations=annotations)
     input_cell_types = _format_domain_cell_type_percentages(cell_type_pct, domain_ids)
 
     input_pathway = _format_pathway_scores(pathway_scores, domain_ids)
