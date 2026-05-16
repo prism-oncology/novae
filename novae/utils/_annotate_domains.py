@@ -28,11 +28,12 @@ def _create_prompt(tissue: str = "unknown", species: str | None = None, spatial_
         "Be concise but specific. Some domain may represent mixed or transitional regions. "
         "CRITICAL OUTPUT RULES: "
         "- The 'domain_name' must contain ONLY a short domain label. "
-        "- Do NOT label domain using cell-type names, but using niche names. For instance, don’t label a 'B and T cells' domain, but use 'Tertiary Lymphoid Structure' instead. "
+        "- Do NOT label domain using cell-type names, but using niche names. For instance, do not label a 'B and T cells' domain, but use 'Tertiary Lymphoid Structure' instead. "
+        "- Use 2-5 words per label. "
+        "- Prefer established histological/spatial terms. "
         "- Do NOT include explanations, examples, or additional details. "
         "- Do NOT use phrases like 'including', 'such as', or 'with'. "
         "- Do NOT skip any domain. "
-        "- Do NOT add explanations."
         "- Do NOT add explanations. "
         "Return only valid JSON matching the provided schema."
     )
@@ -54,16 +55,15 @@ def _format_pathway_scores(
 
 
 def _format_domain_cell_percentages(adata: AnnData, obs_key: str, domain_ids: list[int] | list[str]) -> str:
-    lines = [
-        f"Domain {domain_id}: {pct:.2%}" for domain_id, pct in adata.obs[obs_key].value_counts(normalize=True).items()
-    ]
+    freq = adata.obs[obs_key].value_counts(normalize=True)
+    lines = [f"Domain {domain_id}: {freq.get(domain_id, 0):.2%}" for domain_id in domain_ids]
     return "Cell percentages by domain:\n" + "\n".join(lines)
 
 
 def _format_domain_cell_type_percentages(
     cell_type_pct: pd.DataFrame | None,
     domain_ids: list[int] | list[str],
-    top_k: int = 5,
+    top_k: int = 3,
 ) -> str:
     if cell_type_pct is None:
         return ""
@@ -74,6 +74,8 @@ def _format_domain_cell_type_percentages(
             continue
         row = cell_type_pct.loc[domain_id].sort_values(ascending=False)
         row = row[row > 0].head(top_k)
+        if row.empty:
+            continue
         values = ", ".join(f"{cell_type}={pct:.2%}" for cell_type, pct in row.items())
         lines.append(f"Domain {domain_id}: {values}")
 
@@ -256,7 +258,6 @@ def _get_cell_type_pct(
 
     df = adata.obs[[obs_key, annotations]].copy()
 
-    # Normalize cell-type counts within each domain.
     pct = pd.crosstab(df[obs_key], df[annotations], normalize="index")
     return pct
 
