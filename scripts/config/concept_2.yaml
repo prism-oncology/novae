@@ -1,10 +1,10 @@
 data:
-  train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept
-  val_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept_validation
+  train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2
+  val_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2_validation
 
 model_kwargs:
   embedding_name: "X_scConcept"
-  embedding_size: 512
+  embedding_size: 1024
   background_noise_lambda: 0.1
   sensitivity_noise_std: 0.01
   n_hops_view: 2
