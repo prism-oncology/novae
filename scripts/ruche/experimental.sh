@@ -1,11 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=novae
 #SBATCH --output=/gpfs/workdir/blampeyq/.jobs_outputs/%j
-#SBATCH --time=24:00:00
-#SBATCH --partition=gpu
-#SBATCH --mem=300G
+#SBATCH --time=10:00:00
+#SBATCH --partition=cpu_short
+#SBATCH --mem=20G
 #SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:1
 
 module purge
 
