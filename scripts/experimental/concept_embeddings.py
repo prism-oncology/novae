@@ -29,7 +29,7 @@ TRAINING_FILES = list(Path("/gpfs/workdir/blampeyq/novae/data").rglob("*.h5ad"))
 VALIDATION_FILES = list((PRIME_DATASET_PATH / "novae_validation").glob("*.h5ad"))
 
 concept = scConcept(cache_dir=BLAMPEYQ / ".cache")
-concept.load_config_and_model(model_name="corpus230M[human]-model170M")
+concept.load_config_and_model(model_name="corpus40M-model30M")
 
 
 def run_adata(adata: AnnData, name: str, res_path: Path) -> None:
@@ -51,7 +51,7 @@ def save_umap(adata: AnnData, name: str, key: str) -> None:
     sc.pp.neighbors(adata, use_rep=key)
     sc.tl.umap(adata)
     sc.pl.umap(adata, color=adata.var_names[0], vmax="p95", show=False)
-    plt.savefig(UMAP_PATH / f"{name}_X_scConcept4.png", bbox_inches="tight")
+    plt.savefig(UMAP_PATH / f"{name}_X_scConcept3.png", bbox_inches="tight")
 
 
 def add_gene_id(adata: AnnData, lower_name: str) -> tuple[AnnData, str]:
@@ -81,7 +81,7 @@ def save_concept_embeddings(adata: AnnData, name: str, res_path: Path) -> None:
 
 def main(paths: list[Path], validation: bool) -> None:
     suffix = "_validation" if validation else ""
-    res_path = BLAMPEYQ / "res_novae" / f"X_scConcept4{suffix}"
+    res_path = BLAMPEYQ / "res_novae" / f"X_scConcept3{suffix}"
 
     res_path.mkdir(parents=True, exist_ok=True)
 

@@ -38,8 +38,13 @@ def load_local_dataset(path: str) -> list[AnnData]:
 
     for p in all_paths:
         adata = anndata.read_h5ad(p)
+
+        adata.obs[Keys.SLIDE_ID] = p.stem
+        adata.obs[Keys.SLIDE_ID] = adata.obs[Keys.SLIDE_ID].astype("category")
+
         if selection is not None:
             adata.uns[Keys.UNS_TISSUE] = selection.loc[p.stem, Keys.UNS_TISSUE]
+
         adatas.append(adata)
 
     return adatas

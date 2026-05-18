@@ -9,10 +9,8 @@ import pyarrow  # noqa: F401
 
 import argparse
 
-from anndata import AnnData
-
 import novae
-from novae._constants import Keys, Nums
+from novae._constants import Nums
 from novae.data._load import load_local_dataset
 
 from .utils import get_callbacks, init_wandb_logger, post_training, read_config
@@ -24,10 +22,6 @@ def main(args: argparse.Namespace) -> None:
     ### Load dataset(s)
     adatas = load_local_dataset(config.data.train_dataset)
     adatas_val = load_local_dataset(config.data.val_dataset) if config.data.val_dataset else None
-
-    _check_sid(adatas)
-    if adatas_val is not None:
-        _check_sid(adatas_val)
 
     ### Initialize model, logger and callbacks
     logger = init_wandb_logger(config)
@@ -51,13 +45,6 @@ def main(args: argparse.Namespace) -> None:
         model.fit(adatas, logger=logger, callbacks=callbacks, **config.fit_kwargs)
 
     post_training(model, adatas, config)
-
-
-def _check_sid(adatas: list[AnnData]):
-    for adata in adatas:
-        if Keys.SLIDE_ID not in adata.obs:
-            assert "slide_id" in adata.obs
-            adata.obs[Keys.SLIDE_ID] = adata.obs["slide_id"].astype("category")  # backwards compatibility
 
 
 if __name__ == "__main__":
