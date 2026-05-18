@@ -11,13 +11,24 @@ from ...utils import repository_root
 log = logging.getLogger(__name__)
 
 
-def _read_h5ad_from_hub(name: str, row: pd.Series):
+def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) -> AnnData:
     from huggingface_hub import hf_hub_download
 
     file_path = f"{row['species']}/{row['tissue']}/{name}.h5ad"
     local_file = hf_hub_download(repo_id="MICS-Lab/novae", filename=file_path, repo_type="dataset")
 
-    return sc.read_h5ad(local_file)
+    adata = sc.read_h5ad(local_file)
+
+    if annotations:
+        try:
+            df_annot = pd.read_parquet(f"hf://datasets/MICS-Lab/novae/annotations/{name}.parquet")
+            adata.obs[df_annot.columns] = df_annot
+        except FileNotFoundError:
+            log.warning(f"Annotations unavailable for {name}. They will not be added to the adata.obs.")
+        except Exception as e:
+            log.warning(f"Failed to read annotations for {name}: {e}.")
+
+    return adata
 
 
 def load_dataset(
@@ -27,6 +38,7 @@ def load_dataset(
     technology: list[str] | str | None = None,
     custom_filter: Callable[[pd.DataFrame], pd.Series] | None = None,
     top_k: int | None = None,
+    annotations: bool = False,
     dry_run: bool = False,
 ) -> list[AnnData] | pd.DataFrame:
     """Automatically load slides from the Novae dataset repository.
@@ -36,12 +48,13 @@ def load_dataset(
         Internally, the function reads [this dataset metadata file](https://huggingface.co/datasets/MICS-Lab/novae/blob/main/metadata.csv) to select the slides that match the provided filters.
 
     Args:
-        pattern: Optional pattern to match the slides names.
+        pattern: Optional pattern to match the slides names, or directly a slide name.
         tissue: Optional tissue (or tissue list) to filter the slides. E.g., `"brain"` or `"colon"`.
         species: Optional species (or species list) to filter the slides. E.g., `"human"` or `"mouse"`.
         technology: Optional technology (or technology list) to filter the slides. E.g., `"xenium"` or `"visium_hd"`.
         custom_filter: Custom filter function that takes the metadata DataFrame (see above link) and returns a boolean Series to decide which rows should be kept.
         top_k: Optional number of slides to keep. If `None`, keeps all slides.
+        annotations: If `True`, this will add cell-type annotations and/or pre-computed novae spatial domains in `adata.obs`. Not all slides have these annotations available.
         dry_run: If `True`, the function will only return the metadata of slides that match the filters.
 
     Returns:
@@ -82,7 +95,7 @@ def load_dataset(
         return cast(pd.DataFrame, metadata)
 
     log.info(f"Found {len(metadata)} h5ad file(s) matching the filters.")
-    return [_read_h5ad_from_hub(name, row) for name, row in metadata.iterrows()]
+    return [_read_h5ad_from_hub(name, row, annotations=annotations) for name, row in metadata.iterrows()]
 
 
 def load_local_dataset(relative_path: str, files_black_list: list[str] | None = None) -> list[AnnData]:

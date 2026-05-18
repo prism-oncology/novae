@@ -1,6 +1,6 @@
 [project]
 name = "novae"
-version = "1.0.4"
+version = "1.0.5"
 description = "Graph-based foundation model for spatial transcriptomics data"
 authors = [{ name = "Quentin Blampey", email = "quentin.blampey@gmail.com" }]
 requires-python = ">=3.11"
@@ -50,9 +50,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://mics-lab.github.io/novae/"
+Homepage = "https://prism-oncology.github.io/novae/"
 Repository = "https://github.com/prism-oncology/novae"
-Documentation = "https://mics-lab.github.io/novae/"
+Documentation = "https://prism-oncology.github.io/novae/"
 
 [tool.hatch.build.targets.sdist]
 include = ["novae"]
