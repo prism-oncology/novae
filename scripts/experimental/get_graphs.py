@@ -9,11 +9,9 @@ import scanpy as sc
 
 import novae
 
-RES_PATH = Path("/gpfs/workdir/blampeyq/res_novae/X_scConcept")
 
-
-def main() -> None:
-    paths = list(RES_PATH.glob("*.h5ad"))
+def main(directory: Path) -> None:
+    paths = list(directory.glob("*.h5ad"))
 
     data = {
         "slide_id": [],
@@ -34,8 +32,9 @@ def main() -> None:
         data["mean_distances"].append(adata.obsp["spatial_distances"].data.mean())
 
     df = pd.DataFrame(data)
-    df.to_csv(RES_PATH / "mean_distances.csv", index=False)
+    df.to_csv(directory / "mean_distances.csv", index=False)
 
 
 if __name__ == "__main__":
-    main()
+    for directory in Path("/gpfs/workdir/blampeyq/res_novae").glob("X_scConcept*"):
+        main(directory)
