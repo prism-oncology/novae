@@ -3,20 +3,15 @@ import logging
 import pandas as pd
 from anndata import AnnData
 
-from .. import plot, utils
+from .. import utils
 from .._constants import Keys
-from .clients import _get_api_request_func, _validate_api_key
-from .describe import (
-    _format_domain_cell_percentages,
-    _format_domain_cell_type_percentages,
-    _format_pathway_scores,
-    _markers_as_dict,
-)
+from .clients import api_request
+from .describe import domains_description
 
 log = logging.getLogger(__name__)
 
 
-def _create_prompt(tissue: str = "unknown", species: str | None = None, spatial_context: str | None = None) -> str:
+def _get_system_prompt(tissue: str = "unknown", species: str | None = None, spatial_context: str | None = None) -> str:
     """
     Prompt for domain labeling.
     """
@@ -43,50 +38,34 @@ def _create_prompt(tissue: str = "unknown", species: str | None = None, spatial_
     )
 
 
-def _output_schema(
-    domain_ids: list,
-    domain_key: str,
-    label_key: str,
-    confidence_score_key: str,
-    additionalProperties: bool = False,
-) -> dict:
+def _get_output_schema(domain_ids: list, domain_key: str) -> dict:
     schema = {
         "type": "object",
         "properties": {
-            label_key: {
+            Keys.LABEL_SUFFIX: {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "properties": {
                         domain_key: {"type": "string", "enum": domain_ids},
-                        label_key: {
+                        Keys.LABEL_SUFFIX: {
                             "type": "string",
                             "description": "Most likely domain name. May be a mixed label if needed.",
                         },
-                        confidence_score_key: {
+                        Keys.CONFIDENCE_SCORE: {
                             "type": "number",
                             "description": "A confidence score between 0 and 1 for the labeling.",
                         },
                     },
-                    "required": [domain_key, label_key, confidence_score_key],
-                    "additionalProperties": additionalProperties,
+                    "required": [domain_key, Keys.LABEL_SUFFIX, Keys.CONFIDENCE_SCORE],
+                    "additionalProperties": False,
                 },
             }
         },
-        "required": [label_key],
-        "additionalProperties": additionalProperties,
+        "required": [Keys.LABEL_SUFFIX],
+        "additionalProperties": False,
     }
     return schema
-
-
-def _get_cell_type_pct(adata: AnnData, obs_key: str, cell_type_key: str) -> pd.DataFrame:
-    if cell_type_key not in adata.obs:
-        raise KeyError(f"`cell_type_key` key '{cell_type_key}' was not found in `adata.obs`.")
-
-    df = adata.obs[[obs_key, cell_type_key]].copy()
-
-    pct = pd.crosstab(df[obs_key], df[cell_type_key], normalize="index")
-    return pct
 
 
 def label_domains(
@@ -128,76 +107,40 @@ def label_domains(
     """
 
     obs_key = utils.check_available_domains_key([adata], obs_key)
+    domain_ids = list(pd.unique(adata.obs[obs_key].dropna()))
 
-    domain_ids = pd.Index(pd.unique(adata.obs[obs_key].dropna()))
-
-    gene_marker_dict = _markers_as_dict(adata, obs_key, domain_ids, n_genes)
-
-    domain_ids = list(gene_marker_dict.keys())
-
-    input_markers = "Gene markers:\n" + "\n".join(
-        f"Domain {domain_id}: {', '.join(gene_marker_dict[domain_id])}" for domain_id in domain_ids
+    description = domains_description(
+        adata=adata,
+        obs_key=obs_key,
+        domain_ids=domain_ids,
+        cell_type_key=cell_type_key,
+        pathways=pathways,
+        n_genes=n_genes,
     )
-    input_percentages = _format_domain_cell_percentages(adata, obs_key, domain_ids)
-
-    pathway_scores = (
-        None
-        if pathways is None
-        else plot.pathway_scores(adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True)
-    )
-
-    cell_type_pct = (
-        None if cell_type_key is None else _get_cell_type_pct(adata, obs_key=obs_key, cell_type_key=cell_type_key)
-    )
-    input_cell_types = _format_domain_cell_type_percentages(cell_type_pct, domain_ids)
-
-    input_pathway = _format_pathway_scores(pathway_scores, domain_ids)
-
-    prompt_sections = [input_markers, input_percentages]
-    if input_cell_types:
-        prompt_sections.append(input_cell_types)
-    if input_pathway:
-        prompt_sections.append(input_pathway)
-
-    prompt = _create_prompt(species=species, tissue=tissue, spatial_context=spatial_context)
 
     messages = [
         {
             "role": "developer",
-            "content": prompt,
+            "content": _get_system_prompt(species=species, tissue=tissue, spatial_context=spatial_context),
         },
         {
             "role": "user",
-            "content": "Label the following domains.\n\n" + "\n\n".join(prompt_sections),
+            "content": f"Label the following domains.\n\n{description}",
         },
     ]
 
-    output_schema = _output_schema(
-        domain_ids=domain_ids,
-        domain_key=obs_key,
-        label_key=Keys.LABEL_SUFFIX,
-        confidence_score_key=Keys.CONFIDENCE_SCORE,
-    )
+    output_schema = _get_output_schema(domain_ids=domain_ids, domain_key=obs_key)
 
     if return_prompt:
         return {"messages": messages, "output_schema": output_schema}
 
-    is_openai = provider.lower().startswith("openai")
-
-    api_key = _validate_api_key(
-        api_key,
-        env_var=Keys.OPENAI_API_KEY if is_openai else Keys.ANTHROPIC_API_KEY,
-        provider=provider,
-    )
-
-    api_request_func = _get_api_request_func(provider=provider, model=model)
-
-    result = api_request_func(
-        model=model,
+    result = api_request(
         api_key=api_key,
+        provider=provider,
+        model=model,
         messages=messages,
-        max_tokens=max_tokens,
         output_schema=output_schema,
+        max_tokens=max_tokens,
         seed=seed,
     )
 
