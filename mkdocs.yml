@@ -24,6 +24,7 @@ nav:
   - API:
       - Novae model: api/Novae.md
       - Data: api/data.md
+      - Labeling: api/label.md
       - Utils: api/utils.md
       - Plotting: api/plot.md
       - Advanced:

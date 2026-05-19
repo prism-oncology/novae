@@ -28,7 +28,13 @@ def label_domains(
     seed: int | None = None,
     return_prompt: bool = False,
 ) -> pd.DataFrame | dict[str, dict[str, Any]]:
-    """Label the Novae spatial domains with an LLM based on descriptive information: DEGs, domain sizes, pathway expressions, and cell-type proportions.
+    """While the [`model.assign_domains`](../Novae/#novae.Novae.assign_domains) function provide domain information, this function provide biologically meaningful label or names to the latter Novae spatial domains.
+
+    Internally, it uses an LLM which labels the domains based on descriptive information: DEGs, domain sizes, pathway expressions, and cell-type proportions.
+
+    !!! info "API key"
+        An API key is required to use this function. You can either provide it directly as an `api_key` argument, or set it as an environment variable (`OPENAI_API_KEY` for OpenAI, `ANTHROPIC_API_KEY` for Anthropic).
+        If you just want to generate the prompt without making an API call, set `return_prompt=True` and no API key will be required. You can then copy/paste the generated `messages` and `output_schema` into your preferred LLM playground.
 
     Args:
         adata: An `AnnData` object containing the spatial domains assigned by Novae.
@@ -51,7 +57,7 @@ def label_domains(
     """
 
     obs_key = utils.check_available_domains_key([adata], obs_key)
-    domain_ids = list(pd.unique(adata.obs[obs_key].dropna()))
+    domain_ids = adata.obs[obs_key].dropna().unique().tolist()
 
     description = domains_description(
         adata=adata,
@@ -88,26 +94,26 @@ def label_domains(
         seed=seed,
     )
 
-    return pd.DataFrame(result[Keys.LABEL_SUFFIX])
+    return pd.DataFrame(result[Keys.LABEL_SUFFIX]).set_index(obs_key)
 
 
 def _get_system_prompt(tissue: str = "unknown", species: str | None = None, spatial_context: str | None = None) -> str:
     return (
-        f"You are an expert in spatial transcriptomics analysis specializing in {species or ''} tissue domain labeling. "
+        f"You are an expert in spatial transcriptomics analysis specializing in {species or ''} tissue spatial-domain labeling. "
         f"Identify the most likely spatial domain name or tissue region (niche) for each domain of a {tissue} tissue based on marker genes and potentially enriched pathway scores. "
         "Consider spatial context, functional zones, and tissue organization when assigning domain names. "
         f"{spatial_context or ''} "
         "Be concise but specific. Some domain may represent mixed or transitional regions. "
         "CRITICAL OUTPUT RULES: "
-        "- The 'domain_name' must contain ONLY a short domain label. "
-        "- Do NOT label domain using cell-type names, but using niche names. For instance, do not label a 'B and T cells' domain, but use 'Tertiary Lymphoid Structure' instead. "
-        "- Use 2-5 words per label. "
-        "- Prefer established histological/spatial terms. "
-        "- Do NOT include explanations, examples, or additional details. "
-        "- Do NOT use phrases like 'including', 'such as', or 'with'. "
-        "- Do NOT skip any domain. "
-        "- Do NOT add explanations. "
-        "Return only valid JSON matching the provided schema."
+        "\n- The 'domain_name' must contain ONLY a short domain label. "
+        "\n- Do NOT label domain using cell-type names, but using niche names. For instance, do not label a 'B and T cells' domain, but use 'Tertiary Lymphoid Structure' instead. "
+        "\n- Use 2-5 words per label. "
+        "\n- Prefer established histological/spatial terms. "
+        "\n- Do NOT include explanations, examples, or additional details. "
+        "\n- Do NOT use phrases like 'including', 'such as', or 'with'. "
+        "\n- Do NOT skip any domain. "
+        "\n- Do NOT add explanations. "
+        "\n- Return only valid JSON matching the provided schema."
     )
 
 

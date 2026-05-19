@@ -38,7 +38,7 @@ class Keys:
     OPENAI_API_KEY: str = "OPENAI_API_KEY"
     ANTHROPIC_API_KEY: str = "ANTHROPIC_API_KEY"
     LABEL_SUFFIX: str = "label"
-    CONFIDENCE_SCORE: str = "annotation_conf_score"
+    CONFIDENCE_SCORE: str = "confidence_score"
 
 
 class Nums:
