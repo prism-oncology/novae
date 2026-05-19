@@ -70,7 +70,7 @@ def label_domains(
 
     messages = [
         {
-            "role": "developer",
+            "role": "system",
             "content": _get_system_prompt(tissue=tissue, species=species, spatial_context=spatial_context),
         },
         {
