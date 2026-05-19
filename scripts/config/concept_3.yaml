@@ -1,6 +1,6 @@
 data:
   train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept3
-  val_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept3_validation
+  val_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept3_validation2
 
 model_kwargs:
   embedding_name: "X_scConcept"
