@@ -28,9 +28,9 @@ def label_domains(
     seed: int | None = None,
     return_prompt: bool = False,
 ) -> pd.DataFrame | dict[str, dict[str, Any]]:
-    """While the [`model.assign_domains`](../Novae/#novae.Novae.assign_domains) function provide domain information, this function provide biologically meaningful label or names to the latter Novae spatial domains.
+    """While the [`model.assign_domains`](../Novae/#novae.Novae.assign_domains) function provide domain IDs, this function provide biologically meaningful label (or names) to the latter Novae spatial domain IDs.
 
-    Internally, it uses an LLM which labels the domains based on descriptive information: DEGs, domain sizes, pathway expressions, and cell-type proportions.
+    Internally, it uses an LLM that is prompted with descriptive information: DEGs per domain, domain sizes, optionally pathway expressions, and cell-type proportions.
 
     !!! info "API key"
         An API key is required to use this function. You can either provide it directly as an `api_key` argument, or set it as an environment variable (`OPENAI_API_KEY` for OpenAI, `ANTHROPIC_API_KEY` for Anthropic).

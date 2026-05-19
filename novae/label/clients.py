@@ -62,15 +62,13 @@ def _openai_api_request(
 
     client = OpenAI(api_key=api_key)
 
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {"name": Keys.LABEL_SUFFIX, "schema": output_schema, "strict": True},
-    }
-
     request_kwargs = {
         "model": model,
         "messages": messages,
-        "response_format": response_format,
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {"name": Keys.LABEL_SUFFIX, "schema": output_schema, "strict": True},
+        },
     }
     if seed is not None:
         request_kwargs["seed"] = seed
@@ -101,29 +99,20 @@ def _anthropic_api_request(
 
     client = anthropic.Anthropic(api_key=api_key)
 
-    if max_tokens is None:
-        max_tokens = 1000
-    elif not isinstance(max_tokens, int) or max_tokens <= 0:
-        raise ValueError("`max_tokens` must be a positive integer.")
-
-    output_config = {
-        "format": {
-            "type": "json_schema",
-            "schema": output_schema,
-        }
-    }
-
-    system = "\n\n".join(message["content"] for message in messages if message["role"] == "developer")
-    user_messages = [
-        {"role": "user", "content": message["content"]} for message in messages if message["role"] == "user"
-    ]
+    system = "\n\n".join(message["content"] for message in messages if message["role"] == "system")
+    user_messages = [message for message in messages if message["role"] == "user"]
 
     request_kwargs = {
         "model": model,
         "messages": user_messages,
         "max_tokens": max_tokens,
         "system": system,
-        "output_config": output_config,
+        "output_config": {
+            "format": {
+                "type": "json_schema",
+                "schema": output_schema,
+            }
+        },
     }
     if seed is not None:
         request_kwargs["seed"] = seed
