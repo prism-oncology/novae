@@ -13,32 +13,22 @@ def domains_description(
     pathways: list[str] | None,
     n_genes: int,
 ) -> str:
-    gene_marker_dict = _markers_as_dict(adata, obs_key, domain_ids, n_genes)
+    sections: list[str] = [
+        _deg_description(adata, obs_key, domain_ids, n_genes),
+        _domain_size_description(adata, obs_key, domain_ids),
+    ]
 
-    input_markers = "Gene markers:\n" + "\n".join(
-        f"Domain {domain_id}: {', '.join(gene_marker_dict[domain_id])}" for domain_id in domain_ids
-    )
-    input_percentages = _format_domain_cell_percentages(adata, obs_key, domain_ids)
-
-    prompt_sections = [input_markers, input_percentages]
     if cell_type_key is not None:
-        cell_type_pct = _get_cell_type_pct(adata, obs_key=obs_key, cell_type_key=cell_type_key)
-        input_cell_types = _format_domain_cell_type_percentages(cell_type_pct, domain_ids)
-        prompt_sections.append(input_cell_types)
+        sections.append(_cell_type_description(adata, obs_key, domain_ids, cell_type_key))
+
     if pathways is not None:
-        pathway_scores = plot.pathway_scores(adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True)
-        input_pathway = _format_pathway_scores(pathway_scores, domain_ids)
-        prompt_sections.append(input_pathway)
+        sections.append(_pathway_description(adata, obs_key, pathways, domain_ids))
 
-    return "\n\n".join(prompt_sections)
+    return "\n\n".join(sections)
 
 
-def _format_pathway_scores(
-    pathway_scores: pd.DataFrame | None,
-    domain_ids: list[int] | list[str],
-) -> str:
-    if pathway_scores is None:
-        return ""
+def _pathway_description(adata: AnnData, obs_key: str, pathways: list[str], domain_ids: list[int] | list[str]) -> str:
+    pathway_scores = plot.pathway_scores(adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True)
 
     lines = []
     for domain_id in domain_ids:
@@ -48,49 +38,50 @@ def _format_pathway_scores(
     return "Pathway scores:\n" + "\n".join(lines)
 
 
-def _format_domain_cell_percentages(adata: AnnData, obs_key: str, domain_ids: list[int] | list[str]) -> str:
-    freq = adata.obs[obs_key].value_counts(normalize=True)
-    lines = [f"Domain {domain_id}: {freq.get(domain_id, 0):.2%}" for domain_id in domain_ids]
+def _domain_size_description(adata: AnnData, obs_key: str, domain_ids: list[int] | list[str]) -> str:
+    perc = adata.obs[obs_key].value_counts(normalize=True)
+
+    lines = [f"Domain {domain_id}: {perc.get(domain_id, 0):.2%}" for domain_id in domain_ids]
+
     return "Cell percentages by domain:\n" + "\n".join(lines)
 
 
-def _format_domain_cell_type_percentages(
-    cell_type_pct: pd.DataFrame | None,
-    domain_ids: list[int] | list[str],
-    top_k: int = 3,
-) -> str:
-    if cell_type_pct is None:
-        return ""
+def _deg_description(adata: AnnData, obs_key: str, domain_ids: list[str], n_genes: int) -> str:
+    rank_genes_groups: dict[str, dict[str, str]] | None = adata.uns.get("rank_genes_groups")
 
-    lines = []
-    for domain_id in domain_ids:
-        if domain_id not in cell_type_pct.index:
-            continue
-        row = cell_type_pct.loc[domain_id].sort_values(ascending=False)
-        row = row[row > 0].head(top_k)
-        if row.empty:
-            continue
-        values = ", ".join(f"{cell_type}={pct:.2%}" for cell_type, pct in row.items())
-        lines.append(f"Domain {domain_id}: {values}")
-
-    return "" if not lines else "Cell-type composition by domain:\n" + "\n".join(lines)
-
-
-def _markers_as_dict(adata: AnnData, obs_key: str, domain_ids: list[str], n_genes: int = 15):
-    rank_genes_groups = adata.uns.get("rank_genes_groups")
     groupby = None if rank_genes_groups is None else rank_genes_groups.get("params", {}).get("groupby")
     if rank_genes_groups is None or groupby != obs_key:
         sc.tl.rank_genes_groups(adata, groupby=obs_key)
 
     names = adata.uns["rank_genes_groups"]["names"][:n_genes]
-    return {domain: list(names[str(domain)]) for domain in domain_ids}
+
+    return "Gene markers (DEGs):\n" + "\n".join(
+        f"Domain {domain_id}: {', '.join(list(names[domain_id]))}" for domain_id in domain_ids
+    )
 
 
-def _get_cell_type_pct(adata: AnnData, obs_key: str, cell_type_key: str) -> pd.DataFrame:
+def _cell_type_description(
+    adata: AnnData, obs_key: str, domain_ids: list[str], cell_type_key: str, top_k: int = 3
+) -> str:
     if cell_type_key not in adata.obs:
         raise KeyError(f"`cell_type_key` key '{cell_type_key}' was not found in `adata.obs`.")
 
     df = adata.obs[[obs_key, cell_type_key]].copy()
 
-    pct = pd.crosstab(df[obs_key], df[cell_type_key], normalize="index")
-    return pct
+    cell_type_percentages = pd.crosstab(df[obs_key], df[cell_type_key], normalize="index")
+
+    lines = []
+    for domain_id in domain_ids:
+        if domain_id not in cell_type_percentages.index:
+            continue
+
+        row = cell_type_percentages.loc[domain_id].sort_values(ascending=False)
+        row = row[row > 0].head(top_k)
+
+        if row.empty:
+            continue
+
+        values = ", ".join(f"{cell_type}={pct:.2%}" for cell_type, pct in row.items())
+        lines.append(f"Domain {domain_id}: {values}")
+
+    return "Cell-type composition by domain:\n" + "\n".join(lines)

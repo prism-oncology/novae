@@ -1,36 +1,47 @@
 import json
 from os import getenv
+from typing import Any
 
 from .._constants import Keys
 
+PROVIDERS = ["openai", "anthropic"]
 
-def _validate_api_key(
+
+def api_request(
     api_key: str | None,
-    env_var: str | None = None,
-    provider: str | None = None,
-) -> str:
+    provider: str,
+    model: str,
+    messages: list[dict[str, str]],
+    output_schema: dict[str, Any],
+    max_tokens: int,
+    seed: int | None = None,
+) -> dict[str, list[Any]]:
+    assert provider in PROVIDERS, f"`provider` must be one of: {PROVIDERS}."
+
+    is_openai = provider == "openai"
+    env_var = Keys.OPENAI_API_KEY if is_openai else Keys.ANTHROPIC_API_KEY
+
+    api_request_func = _openai_api_request if is_openai else _anthropic_api_request
+
+    return api_request_func(
+        model=model,
+        api_key=_validate_api_key(api_key, env_var=env_var, provider=provider),
+        messages=messages,
+        max_tokens=max_tokens,
+        output_schema=output_schema,
+        seed=seed,
+    )
+
+
+def _validate_api_key(api_key: str | None, env_var: str | None = None, provider: str | None = None) -> str:
     if api_key is None:
         api_key = getenv(env_var)
-        if api_key is None or not isinstance(api_key, str) or not api_key.strip():
-            raise ValueError(f"{provider} API key is required. Provide `api_key` or set `{env_var}`.")
-        return api_key.strip()
-    else:
-        if not isinstance(api_key, str) or not api_key.strip():
-            raise ValueError("`api_key` must be a non-empty string when provided.")
-        return api_key.strip()
+        assert api_key is not None, f"{provider} API key is required. Provide `api_key` or set `{env_var}`."
 
+    if not isinstance(api_key, str) or not api_key.strip():
+        raise ValueError("`api_key` must be a non-empty string when provided.")
 
-def _get_api_request_func(provider: str, model: str) -> callable:
-    model_name = model.strip() if isinstance(model, str) else ""
-    if not model_name:
-        raise ValueError("`model` must be a non-empty string (e.g. `gpt-4.1` or `claude-sonnet-4-5`).")
-
-    provider_name = provider.strip().lower() if isinstance(provider, str) else ""
-    if provider_name not in {"openai", "anthropic"}:
-        raise ValueError("`provider` must be one of: 'openai', 'anthropic'.")
-
-    api_request_func = _anthropic_api_request if provider_name == "anthropic" else _openai_api_request
-    return api_request_func
+    return api_key.strip()
 
 
 def _openai_api_request(
@@ -40,7 +51,7 @@ def _openai_api_request(
     output_schema: dict,
     max_tokens: int,
     seed: int | None = None,
-) -> json:
+) -> dict[str, list[Any]]:
     try:
         from openai import OpenAI
     except ModuleNotFoundError as e:
@@ -79,7 +90,7 @@ def _anthropic_api_request(
     max_tokens: int,
     output_schema: dict,
     seed: int | None = None,
-) -> dict:
+) -> dict[str, list[Any]]:
     try:
         import anthropic
     except ModuleNotFoundError as e:
@@ -122,32 +133,3 @@ def _anthropic_api_request(
         return json.loads(response.content[0].text)
     except Exception as e:
         raise RuntimeError(f"Anthropic API request failed: {e}") from e
-
-
-def api_request(
-    api_key: str | None,
-    provider: str,
-    model: str,
-    messages: list[dict[str, str]],
-    output_schema: dict,
-    max_tokens: int,
-    seed: int | None = None,
-) -> dict:
-    is_openai = provider.lower().startswith("openai")
-
-    api_key = _validate_api_key(
-        api_key,
-        env_var=Keys.OPENAI_API_KEY if is_openai else Keys.ANTHROPIC_API_KEY,
-        provider=provider,
-    )
-
-    api_request_func = _get_api_request_func(provider=provider, model=model)
-
-    return api_request_func(
-        model=model,
-        api_key=api_key,
-        messages=messages,
-        max_tokens=max_tokens,
-        output_schema=output_schema,
-        seed=seed,
-    )
