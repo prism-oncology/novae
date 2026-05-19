@@ -29,7 +29,7 @@ def _weights_clustermap(
     row_colors = None
     if show_tissue_legend and adatas is not None and all(Keys.UNS_TISSUE in adata.uns for adata in adatas):
         tissues = list({adata.uns[Keys.UNS_TISSUE] for adata in adatas})
-        tissue_colors = {tissue: sns.color_palette("tab20")[i] for i, tissue in enumerate(tissues)}
+        tissue_colors = {tissue: sns.color_palette("tab20")[i % 20] for i, tissue in enumerate(tissues)}
 
         row_colors = []
         for slide_id in slide_ids:
