@@ -6,10 +6,10 @@ model_kwargs:
   embedding_name: "X_scConcept"
   embedding_size: 1024
   background_noise_lambda: 0.1
-  sensitivity_noise_std: 0.01
+  sensitivity_noise_std: 0.05
   n_hops_view: 2
   heads: 16
-  hidden_size: 256
+  hidden_size: 512
   output_size: 128
   temperature: 0.08
   num_prototypes: 512
@@ -17,7 +17,7 @@ model_kwargs:
 
 fit_kwargs:
   max_epochs: 35
-  lr: 0.0001
+  lr: 0.00003
   accelerator: "gpu"
   num_workers: 8
   patience: 6
