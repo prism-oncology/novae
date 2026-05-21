@@ -1,5 +1,5 @@
 # isort: skip_file
-# else segmentation fault when importing concept
+# else segmentation fault during imports
 import pyarrow  # noqa: F401
 
 from pathlib import Path

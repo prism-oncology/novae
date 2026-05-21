@@ -1,3 +1,7 @@
+# isort: skip_file
+# else segmentation fault during imports
+import pyarrow  # noqa: F401
+
 from pathlib import Path
 
 import scanpy as sc
