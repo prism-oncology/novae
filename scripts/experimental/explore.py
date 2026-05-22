@@ -7,14 +7,14 @@ from pathlib import Path
 import numpy as np
 import scanpy as sc
 
-other_dir_names = [f"X_scConcept{1 + i}" for i in range(4)]
+other_dir_names = [f"X_scConcept{2 + i}" for i in range(3)]
 
 
 def _print_stats(adata: sc.AnnData, name: str) -> None:
     X = adata.obsm["X_scConcept"]
     mean_l2_norm = np.linalg.norm(X, axis=1).mean()
     print(
-        f"{name}\nshape{X.shape}, mean:{X.mean(0)}, std:{X.std(0)} max:{X.max()}, min:{X.min()}, mean_l2_norm:{mean_l2_norm}\n\n"
+        f"{name}\nshape{X.shape}, mean:{X.mean(0).mean()}, std:{X.std(0).mean()} max:{X.max()}, min:{X.min()}, mean_l2_norm:{mean_l2_norm}\n\n"
     )
 
 
