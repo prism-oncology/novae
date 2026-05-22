@@ -11,7 +11,10 @@ other_dir_names = [f"X_scConcept{1 + i}" for i in range(4)]
 
 def _print_stats(adata: sc.AnnData, name: str) -> None:
     X = adata.obsm["X_scConcept"]
-    print(f"{name}\nshape{X.shape}, mean:{X.mean(0)}, std:{X.std(0)}\n\n")
+    mean_l2_norm = (X**2).sum(1).sqrt().mean()
+    print(
+        f"{name}\nshape{X.shape}, mean:{X.mean(0)}, std:{X.std(0)} max:{X.max()}, min:{X.min()}, mean_l2_norm:{mean_l2_norm}\n\n"
+    )
 
 
 def main(directory: Path) -> None:
