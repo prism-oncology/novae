@@ -14,4 +14,4 @@ source activate novae
 
 cd /gpfs/workdir/blampeyq/novae/scripts/experimental
 
-python -u check_size.py
+python -u explore.py
