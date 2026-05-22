@@ -8,17 +8,17 @@ parameters:
   num_layers:
     values: [10, 14]
   hidden_size:
-    values: [128, 256]
+    values: [128, 256, 512]
   num_prototypes:
     values: [512, 1024]
   background_noise_lambda:
-    min: 0.1
-    max: 0.8
+    min: 0.0002
+    max: 0.002
   sensitivity_noise_std:
-    min: 0.01
-    max: 0.1
+    min: 0.0001
+    max: 0.001
   lr:
-    values: [0.00001, 0.00003]
+    values: [0.00001, 0.00003, 0.0001]
 
 command:
   - python
