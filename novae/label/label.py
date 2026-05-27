@@ -106,13 +106,12 @@ def _get_system_prompt(tissue: str = "unknown", species: str | None = None, spat
         "Be concise but specific. Some domain may represent mixed or transitional regions. "
         "CRITICAL OUTPUT RULES: "
         "\n- The 'domain_name' must contain ONLY a short domain label. "
-        "\n- Do NOT label domain using cell-type names, but using niche names. For instance, do not label a 'B and T cells' domain, but use 'Tertiary Lymphoid Structure' instead. "
+        "\n- Do NOT label domain using cell-type names, but using niche name or function-related names. For instance, do not label a 'B and T cells' domain, but use 'Tertiary Lymphoid Structure' instead. "
         "\n- Use 2-5 words per label. "
         "\n- Prefer established histological/spatial terms. "
         "\n- Do NOT include explanations, examples, or additional details. "
         "\n- Do NOT use phrases like 'including', 'such as', or 'with'. "
         "\n- Do NOT skip any domain. "
-        "\n- Do NOT add explanations. "
         "\n- Return only valid JSON matching the provided schema."
     )
 
