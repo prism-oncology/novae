@@ -1,7 +1,7 @@
 method: random
 metric:
   goal: maximize
-  name: metrics/val_mean_fide_score_res0.5
+  name: metrics/val_mean_fide_score_res0.8
 parameters:
   output_size:
     values: [64, 128]
@@ -18,7 +18,9 @@ parameters:
     min: 0.0001
     max: 0.001
   lr:
-    values: [0.00001, 0.00003, 0.0001]
+    values: [0.00001, 0.00003]
+  temperature:
+    values: [0.08, 0.1, 0.12]
 
 command:
   - python

@@ -39,7 +39,7 @@ class ValidationCallback(Callback):
         num_workers: int = 0,
         slide_name_key: str = "slide_id",
         k: int = 7,
-        res: float = 0.5,
+        res: float = 0.8,
     ):
         assert adatas is None or len(adatas) == 1, "ValidationCallback only supports single slide mode for now"
         self.adata = adatas[0] if adatas is not None else None
