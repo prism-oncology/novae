@@ -12,12 +12,12 @@ For more details, refer to the API of the [PyTorch Lightning Trainer](https://li
 
 ### How to load a pretrained model?
 
-We highly recommend loading a pre-trained Novae model instead of re-training from scratch. For that, choose an available Novae model name on [our HuggingFace collection](https://huggingface.co/collections/MICS-Lab/novae-669cdf1754729d168a69f6bd), and provide this name to the [model.save_pretrained()](../api/Novae/#novae.Novae.save_pretrained) method:
+We highly recommend loading a pre-trained Novae model instead of re-training from scratch. For that, choose an available Novae model name on [our HuggingFace collection](https://huggingface.co/collections/prism-oncology/novae), and provide this name to the [model.save_pretrained()](../api/Novae/#novae.Novae.save_pretrained) method:
 
 ```python
 from novae import Novae
 
-model = Novae.from_pretrained("MICS-Lab/novae-human-0") # or any valid model name
+model = Novae.from_pretrained("prism-oncology/novae-human-0") # or any valid model name
 ```
 
 ### How to avoid overcorrecting?

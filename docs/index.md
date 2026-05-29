@@ -17,7 +17,7 @@ Novae is a deep learning model for spatial domain assignments of spatial transcr
   <img src="https://raw.githubusercontent.com/prism-oncology/novae/main/docs/assets/Figure1.png" alt="novae_overview" width="100%"/>
 </p>
 
-> **(a)** Novae was trained on a large dataset, and is shared on [Hugging Face Hub](https://huggingface.co/collections/MICS-Lab/novae-669cdf1754729d168a69f6bd). **(b)** Illustration of the main tasks and properties of Novae. **(c)** Illustration of the method behind Novae (self-supervision on graphs, adapted from [SwAV](https://arxiv.org/abs/2006.09882)).
+> **(a)** Novae was trained on a large dataset, and is shared on [Hugging Face Hub](https://huggingface.co/collections/prism-oncology/novae). **(b)** Illustration of the main tasks and properties of Novae. **(c)** Illustration of the method behind Novae (self-supervision on graphs, adapted from [SwAV](https://arxiv.org/abs/2006.09882)).
 
 
 ## Why using Novae

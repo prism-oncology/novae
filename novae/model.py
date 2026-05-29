@@ -32,7 +32,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         novae.spatial_neighbors(adata)
 
-        model = novae.Novae.from_pretrained("MICS-Lab/novae-human-0")
+        model = novae.Novae.from_pretrained("prism-oncology/novae-human-0")
 
         model.compute_representations(adata, zero_shot=True)
         model.assign_domains(adata)
@@ -298,10 +298,10 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         """Load a pretrained `Novae` model from HuggingFace Hub.
 
         !!! info "Available model names"
-            See [here](https://huggingface.co/collections/MICS-Lab/novae-669cdf1754729d168a69f6bd) the available Novae model names.
+            See [here](https://huggingface.co/collections/prism-oncology/novae-669cdf1754729d168a69f6bd) the available Novae model names.
 
         Args:
-            model_name_or_path: Name of the model, e.g. `"MICS-Lab/novae-human-0"`, or path to the local model.
+            model_name_or_path: Name of the model, e.g. `"prism-oncology/novae-human-0"`, or path to the local model.
             **kwargs: Optional kwargs for Hugging Face [`from_pretrained`](https://huggingface.co/docs/huggingface_hub/v0.24.0/en/package_reference/mixins#huggingface_hub.ModelHubMixin.from_pretrained) method.
 
         Returns:

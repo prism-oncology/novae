@@ -34,7 +34,7 @@ Check [Novae's documentation](https://prism-oncology.github.io/novae/) to get st
   <img src="https://raw.githubusercontent.com/prism-oncology/novae/main/docs/assets/Figure1.png" alt="novae_overview" width="100%"/>
 </p>
 
-> **(a)** Novae was trained on a large dataset, and is shared on [Hugging Face Hub](https://huggingface.co/collections/MICS-Lab/novae-669cdf1754729d168a69f6bd). **(b)** Illustration of the main tasks and properties of Novae. **(c)** Illustration of the method behind Novae (self-supervision on graphs, adapted from [SwAV](https://arxiv.org/abs/2006.09882)).
+> **(a)** Novae was trained on a large dataset, and is shared on [Hugging Face Hub](https://huggingface.co/collections/prism-oncology/novae). **(b)** Illustration of the main tasks and properties of Novae. **(c)** Illustration of the method behind Novae (self-supervision on graphs, adapted from [SwAV](https://arxiv.org/abs/2006.09882)).
 
 ## Installation
 
@@ -58,7 +58,7 @@ import novae
 novae.spatial_neighbors(adata)
 
 # load a pre-trained model
-model = novae.Novae.from_pretrained("MICS-Lab/novae-human-0")
+model = novae.Novae.from_pretrained("prism-oncology/novae-human-0")
 
 # compute spatial domains
 model.compute_representations(adata, zero_shot=True)
