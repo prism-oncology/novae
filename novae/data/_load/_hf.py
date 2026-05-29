@@ -15,13 +15,13 @@ def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) ->
     from huggingface_hub import hf_hub_download
 
     file_path = f"{row['species']}/{row['tissue']}/{name}.h5ad"
-    local_file = hf_hub_download(repo_id="MICS-Lab/novae", filename=file_path, repo_type="dataset")
+    local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=file_path, repo_type="dataset")
 
     adata = sc.read_h5ad(local_file)
 
     if annotations:
         try:
-            df_annot = pd.read_parquet(f"hf://datasets/MICS-Lab/novae/annotations/{name}.parquet")
+            df_annot = pd.read_parquet(f"hf://datasets/prism-oncology/novae/annotations/{name}.parquet")
             adata.obs[df_annot.columns] = df_annot
         except FileNotFoundError:
             log.warning(f"Annotations unavailable for {name}. They will not be added to the adata.obs.")
@@ -45,7 +45,7 @@ def load_dataset(
 
     !!! info "Selecting slides"
         The function arguments allow to filter the slides based on the tissue, species, and name pattern.
-        Internally, the function reads [this dataset metadata file](https://huggingface.co/datasets/MICS-Lab/novae/blob/main/metadata.csv) to select the slides that match the provided filters.
+        Internally, the function reads [this dataset metadata file](https://huggingface.co/datasets/prism-oncology/novae/blob/main/metadata.csv) to select the slides that match the provided filters.
 
     Args:
         pattern: Optional pattern to match the slides names, or directly a slide name.
@@ -60,7 +60,7 @@ def load_dataset(
     Returns:
         A list of `AnnData` objects, each object corresponds to one slide, or the metadata DataFrame if `dry_run=True`.
     """
-    metadata = pd.read_csv("hf://datasets/MICS-Lab/novae/metadata.csv", index_col=0)
+    metadata = pd.read_csv("hf://datasets/prism-oncology/novae/metadata.csv", index_col=0)
 
     FILTER_COLUMN = [("species", species), ("tissue", tissue), ("technology", technology)]
     VALID_VALUES = {column: metadata[column].unique() for column, _ in FILTER_COLUMN}

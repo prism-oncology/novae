@@ -43,14 +43,16 @@ _generate_fake_scgpt_inputs()
 
 
 def test_load_huggingface_model():
-    model = novae.Novae.from_pretrained("MICS-Lab/novae-test")
+    model = novae.Novae.from_pretrained("MICS-Lab/novae-test")  # should still work with old name
+    assert model.cell_embedder.embedding.weight.requires_grad is False
 
+    model = novae.Novae.from_pretrained("prism-oncology/novae-test")
     assert model.cell_embedder.embedding.weight.requires_grad is False
 
 
 def test_future_huggingface_model():
     with pytest.raises(ValueError):
-        novae.Novae.from_pretrained("MICS-Lab/novae-human-3")
+        novae.Novae.from_pretrained("prism-oncology/novae-human-3")
 
 
 def test_non_existing_local_model():
@@ -245,7 +247,7 @@ def test_saved_model_identical(slide_key: str | None, scgpt_model_dir: str | Non
 def test_fine_tuning_deterministic():
     adata = novae.toy_dataset(n_panels=1, compute_spatial_neighbors=True, xmax=300)[0]
 
-    model = novae.Novae.from_pretrained("MICS-Lab/novae-human-0")
+    model = novae.Novae.from_pretrained("prism-oncology/novae-human-0")
     L.seed_everything(0)
     model.fine_tune(adata, max_epochs=1)
     model.compute_representations(adata)
@@ -254,7 +256,7 @@ def test_fine_tuning_deterministic():
     domains = adata.obs[Keys.LEAVES].copy()
     representations = adata.obsm[Keys.REPR].copy()
 
-    new_model = novae.Novae.from_pretrained("MICS-Lab/novae-human-0")
+    new_model = novae.Novae.from_pretrained("prism-oncology/novae-human-0")
     L.seed_everything(0)
     new_model.fine_tune(adata, max_epochs=1)
     new_model.compute_representations(adata)
@@ -268,7 +270,7 @@ def test_safetensors_parameters_names():
     from huggingface_hub import hf_hub_download
     from safetensors import safe_open
 
-    local_file = hf_hub_download(repo_id="MICS-Lab/novae-human-0", filename="model.safetensors")
+    local_file = hf_hub_download(repo_id="prism-oncology/novae-human-0", filename="model.safetensors")
     with safe_open(local_file, framework="pt", device="cpu") as f:
         pretrained_model_names = f.keys()
 
@@ -276,7 +278,7 @@ def test_safetensors_parameters_names():
 
     actual_names = [name for name, _ in model.named_parameters()]
 
-    # TODO: remove this after MICS-Lab/novae-human-1 release (and update where it is loaded)
+    # TODO: remove this after prism-oncology/novae-human-1 release (and update where it is loaded)
     actual_names = [name for name in actual_names if not name.startswith("encoder.mlp_fusion")]
 
     assert set(pretrained_model_names) == set(actual_names)
@@ -287,7 +289,7 @@ def test_reset_clusters_zero_shot():
 
     novae.utils.spatial_neighbors(adata)
 
-    model = novae.Novae.from_pretrained("MICS-Lab/novae-human-0")
+    model = novae.Novae.from_pretrained("prism-oncology/novae-human-0")
 
     model.compute_representations(adata, zero_shot=True)
     clusters_levels = model.swav_head.clusters_levels.copy()
