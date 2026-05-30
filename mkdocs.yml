@@ -18,12 +18,14 @@ nav:
   - Tutorials:
       - Main usage: tutorials/main_usage.ipynb
       - Different input modes: tutorials/input_modes.md
+      - Domains labeling: tutorials/labeling.ipynb
       - Usage on proteins: tutorials/proteins.ipynb
       - Adding H&E information: tutorials/he_usage.ipynb
       - Spot/bin technologies: tutorials/resolutions.ipynb
   - API:
       - Novae model: api/Novae.md
       - Data: api/data.md
+      - Labeling: api/label.md
       - Utils: api/utils.md
       - Plotting: api/plot.md
       - Advanced:

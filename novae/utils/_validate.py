@@ -250,15 +250,15 @@ def _shared_domains_keys(adatas: list[AnnData]) -> set[str]:
 
 
 def check_available_domains_key(adatas: list[AnnData], obs_key: str | None) -> str:
+    if obs_key is not None:
+        assert all(obs_key in adata.obs for adata in adatas), (
+            f"Novae domains '{obs_key}' not available in all AnnData objects. {ERROR_ADVICE_OBS_KEY}."
+        )
+        return obs_key
+
     available_obs_keys = list(_shared_domains_keys(adatas))
 
     assert len(available_obs_keys), f"No Novae domains available. {ERROR_ADVICE_OBS_KEY}"
-
-    if obs_key is not None:
-        assert all(obs_key in adata.obs for adata in adatas), (
-            f"Novae domains '{obs_key}' not available in all AnnData objects. {ERROR_ADVICE_OBS_KEY}. Or consider using one of {available_obs_keys} instead."
-        )
-        return obs_key
 
     obs_key = available_obs_keys[-1]
     log.info(f"Using {obs_key=} by default.")

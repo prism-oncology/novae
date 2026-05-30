@@ -6,6 +6,7 @@ import pandas as pd
 import scanpy as sc
 from anndata import AnnData
 
+from ..._constants import Keys
 from ...utils import repository_root
 
 log = logging.getLogger(__name__)
@@ -18,6 +19,11 @@ def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) ->
     local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=file_path, repo_type="dataset")
 
     adata = sc.read_h5ad(local_file)
+
+    if "slide_id" in adata.obs:
+        adata.obs.rename(columns={"slide_id": Keys.SLIDE_ID}, inplace=True)
+    else:
+        adata.obs[Keys.SLIDE_ID] = pd.Series(name, index=adata.obs_names, dtype="category")
 
     if annotations:
         try:
