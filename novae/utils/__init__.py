@@ -1,5 +1,4 @@
 import warnings
-from typing import TYPE_CHECKING, Any
 
 from ._utils import (
     fill_invalid_indices,
