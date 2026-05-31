@@ -11,7 +11,7 @@ import argparse
 
 import novae
 from novae._constants import Nums
-from novae.data._load import load_local_dataset
+from novae.data import load_local_dataset
 
 from .utils import get_callbacks, init_wandb_logger, post_training, read_config
 
