@@ -8,7 +8,6 @@ import warnings
 from collections.abc import Iterable
 from enum import Enum
 from functools import partial
-from itertools import chain
 from typing import Literal, get_args
 
 import numpy as np
@@ -17,7 +16,6 @@ from anndata import AnnData
 from anndata.utils import make_index_unique
 from scipy.sparse import SparseEfficiencyWarning, block_diag, csr_matrix, spmatrix
 from scipy.spatial import Delaunay
-from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.neighbors import NearestNeighbors
 
 from .._constants import Keys, Nums
@@ -36,6 +34,7 @@ class CoordType(Enum):
 
 def spatial_neighbors(
     adata: AnnData | list[AnnData],
+    *,
     slide_key: str | None = None,
     radius: tuple[float, float] | float | None = None,
     technology: str | SpatialTechnology | None = None,
@@ -46,6 +45,7 @@ def spatial_neighbors(
     percentile: float | None = None,
     set_diag: bool = False,
     reset_slide_ids: bool = True,
+    verbose: bool = True,
 ):
     """Create a Delaunay graph from the spatial coordinates of the cells.
     The graph is stored in `adata.obsp['spatial_connectivities']` and `adata.obsp['spatial_distances']`. The long edges
@@ -66,6 +66,7 @@ def spatial_neighbors(
         percentile: See `squidpy.gr.spatial_neighbors` documentation.
         set_diag: See `squidpy.gr.spatial_neighbors` documentation.
         reset_slide_ids: Whether to reset the novae slide ids.
+        verbose: Whether to log computation details.
     """
     if reset_slide_ids:
         _set_unique_slide_ids(adata, slide_key=slide_key)
@@ -92,12 +93,8 @@ def spatial_neighbors(
 
     assert radius is None or len(radius) == 2, "Radius is expected to be a tuple (min_radius, max_radius)"
 
-    if technology == "visium":
-        n_neighs = 6 if n_neighs is None else n_neighs
-        coord_type, delaunay = CoordType.GRID, False
-    elif technology == "visium_hd":
-        n_neighs = 8 if n_neighs is None else n_neighs
-        coord_type, delaunay = CoordType.GRID, False
+    if technology in ["visium", "visium_hd"]:
+        coord_type, delaunay, n_neighs = _default_visium_arguments(technology, n_neighs)
     elif technology is not None:
         adata.obsm["spatial"] = _technology_coords(adata, technology)
 
@@ -109,9 +106,10 @@ def spatial_neighbors(
     delaunay = True if delaunay is None else delaunay
     n_neighs = 6 if (n_neighs is None and not delaunay) else n_neighs
 
-    log.info(
-        f"Computing graph on {adata.n_obs:,} cells (coord_type={coord_type.value}, {delaunay=}, {radius=}, {n_neighs=})"
-    )
+    if verbose:
+        log.info(
+            f"Computing graph on {adata.n_obs:,} cells (coord_type={coord_type.value}, {delaunay=}, {radius=}, {n_neighs=})"
+        )
 
     slides = adata.obs[Keys.SLIDE_ID].cat.categories
     make_index_unique(adata.obs_names)
@@ -148,7 +146,18 @@ def spatial_neighbors(
         "params": {"radius": radius, "set_diag": set_diag, "n_neighbors": n_neighs, "coord_type": coord_type.value},
     }
 
-    _sanity_check_spatial_neighbors(adata)
+    _sanity_check_spatial_neighbors(adata, verbose=verbose)
+
+
+def _default_visium_arguments(technology: str, n_neighs: int | None) -> tuple[CoordType, bool, int]:
+    if technology == "visium":
+        n_neighs = 6 if n_neighs is None else n_neighs
+    elif technology == "visium_hd":
+        n_neighs = 8 if n_neighs is None else n_neighs
+    else:
+        raise ValueError(f"Unknown technology `{technology}`")
+
+    return CoordType.GRID, False, n_neighs
 
 
 def _spatial_neighbor(
@@ -247,14 +256,9 @@ def _build_connectivity(
         Adj = csr_matrix((np.ones_like(indices, dtype=np.float64), indices, indptr), shape=(N, N))
 
         if return_distance:
-            # fmt: off
-            dists = np.array(list(chain(*(
-                euclidean_distances(coords[indices[indptr[i] : indptr[i + 1]], :], coords[np.newaxis, i, :])
-                for i in range(N)
-                if len(indices[indptr[i] : indptr[i + 1]])
-            )))).squeeze()
+            rows = np.repeat(np.arange(N), np.diff(indptr))
+            dists = np.linalg.norm(coords[rows] - coords[indices], axis=1)
             Dst = csr_matrix((dists, indices, indptr), shape=(N, N))
-            # fmt: on
     else:
         r = 1 if radius is None else radius if isinstance(radius, (int, float)) else max(radius)
         tree = NearestNeighbors(n_neighbors=n_neighs, radius=r, metric="euclidean")
@@ -341,8 +345,11 @@ def _set_unique_slide_ids(adatas: AnnData | list[AnnData], slide_key: str | None
         adata.obs[Keys.SLIDE_ID] = values.astype("category")
 
 
-def _sanity_check_spatial_neighbors(adata: AnnData):
+def _sanity_check_spatial_neighbors(adata: AnnData, verbose: bool):
     assert adata.obsp[Keys.ADJ].getnnz() > 0, "No neighbors found. Please check your `radius` parameter."
+
+    if not verbose:
+        return
 
     mean_distance = adata.obsp[Keys.ADJ].data.mean()
     max_distance = adata.obsp[Keys.ADJ].data.max()

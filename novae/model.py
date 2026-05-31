@@ -32,7 +32,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         novae.spatial_neighbors(adata)
 
-        model = novae.Novae.from_pretrained("MICS-Lab/novae-human-0")
+        model = novae.Novae.from_pretrained("prism-oncology/novae-human-0")
 
         model.compute_representations(adata, zero_shot=True)
         model.assign_domains(adata)
@@ -309,10 +309,10 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         """Load a pretrained `Novae` model from HuggingFace Hub.
 
         !!! info "Available model names"
-            See [here](https://huggingface.co/collections/MICS-Lab/novae-669cdf1754729d168a69f6bd) the available Novae model names.
+            See [here](https://huggingface.co/collections/prism-oncology/novae-669cdf1754729d168a69f6bd) the available Novae model names.
 
         Args:
-            model_name_or_path: Name of the model, e.g. `"MICS-Lab/novae-human-0"`, or path to the local model.
+            model_name_or_path: Name of the model, e.g. `"prism-oncology/novae-human-0"`, or path to the local model.
             **kwargs: Optional kwargs for Hugging Face [`from_pretrained`](https://huggingface.co/docs/huggingface_hub/v0.24.0/en/package_reference/mixins#huggingface_hub.ModelHubMixin.from_pretrained) method.
 
         Returns:
@@ -414,6 +414,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         if self.mode.zero_shot:
             self.assign_to_kmeans_prototypes(adatas, reference)
+
+        utils.store_inference_mode(adatas, zero_shot=zero_shot)
 
     def assign_to_kmeans_prototypes(
         self, adatas: AnnData | list[AnnData], reference: str | int | Literal["all", "largest"]
@@ -578,6 +580,9 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
                 )
 
             return key_added
+
+        if any(adata.uns.get(Keys.NOVAE_UNS, {}).get("zero_shot", False) for adata in adatas):
+            log.warning("We recommend using a `resolution` instead of the `level` for the zero-shot mode.")
 
         if n_domains is not None:
             leaves_indices = utils.unique_leaves_indices(adatas)

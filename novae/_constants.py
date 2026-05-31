@@ -34,6 +34,12 @@ class Keys:
     N_BATCHES: str = "n_batches"
     NOVAE_VERSION: str = "novae_version"
 
+    # LLM domain labeling
+    OPENAI_API_KEY: str = "OPENAI_API_KEY"
+    ANTHROPIC_API_KEY: str = "ANTHROPIC_API_KEY"
+    LABEL_SUFFIX: str = "label"
+    CONFIDENCE_SCORE: str = "confidence_score"
+
 
 class Nums:
     # training constants

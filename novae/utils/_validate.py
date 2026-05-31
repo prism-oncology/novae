@@ -263,15 +263,15 @@ def _shared_domains_keys(adatas: list[AnnData]) -> set[str]:
 
 
 def check_available_domains_key(adatas: list[AnnData], obs_key: str | None) -> str:
+    if obs_key is not None:
+        assert all(obs_key in adata.obs for adata in adatas), (
+            f"Novae domains '{obs_key}' not available in all AnnData objects. {ERROR_ADVICE_OBS_KEY}."
+        )
+        return obs_key
+
     available_obs_keys = list(_shared_domains_keys(adatas))
 
     assert len(available_obs_keys), f"No Novae domains available. {ERROR_ADVICE_OBS_KEY}"
-
-    if obs_key is not None:
-        assert all(obs_key in adata.obs for adata in adatas), (
-            f"Novae domains '{obs_key}' not available in all AnnData objects. {ERROR_ADVICE_OBS_KEY}. Or consider using one of {available_obs_keys} instead."
-        )
-        return obs_key
 
     obs_key = available_obs_keys[-1]
     log.info(f"Using {obs_key=} by default.")
@@ -295,14 +295,18 @@ def check_slide_name_key(adatas: AnnData | list[AnnData], slide_name_key: str | 
     return slide_name_key
 
 
+OLD_ORGANIZATION = "MICS-Lab/"
+ORGANIZATION = "prism-oncology/"
+
+
 def check_model_name(model_name: str | Path) -> None:
-    if model_name == "MICS-Lab/novae-test":
+    if model_name in [f"{OLD_ORGANIZATION}novae-test", f"{ORGANIZATION}novae-test"]:
         return
 
-    if not str(model_name).startswith("MICS-Lab"):  # local path
+    if not str(model_name).startswith(OLD_ORGANIZATION) and not str(model_name).startswith(ORGANIZATION):  # local path
         if not Path(model_name).exists():
             raise ValueError(
-                f"Model name or path '{model_name}' not found locally. Please provide a valid local path, or use a model from Hugging Face Hub (e.g., starting with 'MICS-Lab')."
+                f"Model name or path '{model_name}' not found locally. Please provide a valid local path, or use a model from Hugging Face Hub (see https://huggingface.co/collections/prism-oncology/novae)."
             )
     else:
         assert isinstance(model_name, str), "Model name must be a string when loading from Hugging Face Hub"

@@ -13,6 +13,7 @@ from ._utils import (
     unique_leaves_indices,
     unique_obs,
     valid_indices,
+    store_inference_mode,
 )
 from ._validate import (
     check_available_domains_key,
