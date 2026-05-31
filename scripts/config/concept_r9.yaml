@@ -1,0 +1,32 @@
+data:
+  train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2
+  val_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2_validation2
+
+model_kwargs:
+  embedding_name: "X_scConcept"
+  embedding_size: 1024
+  n_hops_view: 2
+  heads: 16
+  panel_subset_size: 0
+  output_size: 128
+  num_layers: 12
+  background_noise_lambda: 0.001
+  hidden_size: 256 # 256 or 512
+  num_prototypes: 1024 # 512 or 1024
+  sensitivity_noise_std: 0.0005 # 0.0005 or 0.001
+  temperature: 0.1 # 0.1 or 0.12
+
+fit_kwargs:
+  max_epochs: 40
+  lr: 0.00003 # 0.00001 or 0.00003
+  accelerator: "gpu"
+  num_workers: 8
+  patience: 6
+  min_delta: 0.025
+
+post_training:
+  n_domains: [15, 20, 25]
+  log_metrics: true
+  log_umap: true
+  log_domains: true
+  delete_X: true
