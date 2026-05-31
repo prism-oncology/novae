@@ -66,11 +66,7 @@ def load_dataset(
     """
     metadata = pd.read_csv("hf://datasets/prism-oncology/novae/metadata.csv", index_col=0)
 
-    FILTER_COLUMN = [
-        ("species", species),
-        ("tissue", tissue),
-        ("technology", technology),
-    ]
+    FILTER_COLUMN = [("species", species), ("tissue", tissue), ("technology", technology)]
     VALID_VALUES = {column: metadata[column].unique() for column, _ in FILTER_COLUMN}
 
     for column, value in FILTER_COLUMN:
