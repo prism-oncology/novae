@@ -1,4 +1,5 @@
-wandb_artefact: "novae/novae/model-s0r95t2y:v26"
+# neat-eon
+wandb_artefact: "novae/novae/model-npe8aft1:v23"
 
 data:
   train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2
@@ -6,7 +7,7 @@ data:
 
 fit_kwargs:
   max_epochs: 40
-  lr: 0.00001
+  lr: 0.00003
   accelerator: "gpu"
   num_workers: 8
   patience: 6
