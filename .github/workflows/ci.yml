@@ -39,9 +39,11 @@ jobs:
 
       - name: Tests
         run: uv run pytest --cov --junitxml=junit.xml -o junit_family=legacy
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
       - name: Upload test results to Codecov
-        if: ${{ matrix.python-version == '3.10' }}
+        if: ${{ matrix.python-version == '3.13' }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -57,13 +59,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: pip installation
         run: pip install -e . && pip install pytest-cov poethepoet
 
       - name: Run short tests
         run: poe test_no_multimodal
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
   deploy-docs:
     needs: [tests, test_pip_install]
@@ -103,11 +107,6 @@ jobs:
     name: "Wait until PyPI is ready"
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
       - name: Wait for novae to be available on PyPI
         run: |
           SPEC="novae==${GITHUB_REF#refs/tags/v}"
