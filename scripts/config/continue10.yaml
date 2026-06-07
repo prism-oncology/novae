@@ -1,0 +1,21 @@
+# dulcet-fog-1517
+wandb_artefact: "novae/novae/model-bk24stqz:v16"
+
+data:
+  train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2
+  val_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2_validation2
+
+fit_kwargs:
+  max_epochs: 40
+  lr: 0.0001
+  accelerator: "gpu"
+  num_workers: 8
+  patience: 6
+  min_delta: 0.025
+
+post_training:
+  n_domains: [15, 20, 25]
+  log_metrics: true
+  log_umap: true
+  log_domains: true
+  delete_X: true
