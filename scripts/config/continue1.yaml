@@ -1,5 +1,5 @@
-# neat-eon
-wandb_artefact: "novae/novae/model-npe8aft1:v23"
+# clear-lion-1530
+wandb_artefact: "novae/novae/model-75o3ctfi:v23"
 
 data:
   train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2
