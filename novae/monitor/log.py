@@ -25,7 +25,15 @@ def repository_root() -> Path:
 
 
 def wandb_log_dir() -> Path:
-    return repository_root() / "wandb"
+    LOG_DIR = Path.home() / ".cache" / "wandb" / "novae"
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    return LOG_DIR
+
+
+def wandb_results_dir() -> Path:
+    RES_DIR: Path = wandb_log_dir() / "results" / wandb.run.name
+    RES_DIR.mkdir(parents=True, exist_ok=True)
+    return RES_DIR
 
 
 def log_plt_figure(name: str, dpi: int = 300) -> None:
@@ -33,12 +41,6 @@ def log_plt_figure(name: str, dpi: int = 300) -> None:
     plt.savefig(img_buf, format="png", bbox_inches="tight", dpi=dpi)
     wandb.log({name: wandb.Image(Image.open(img_buf))})
     plt.close()
-
-
-def wandb_results_dir() -> Path:
-    res_dir: Path = wandb_log_dir() / "results" / wandb.run.name
-    res_dir.mkdir(parents=True, exist_ok=True)
-    return res_dir
 
 
 def save_pdf_figure(name: str):
