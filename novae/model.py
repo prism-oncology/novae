@@ -322,7 +322,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         model = super().from_pretrained(model_name_or_path, **kwargs)
 
-        model.mode.from_pretrained()
+        model.mode.as_pretrained()
         model._model_name = model_name_or_path
 
         if model.cell_embedder is not None:
@@ -369,7 +369,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             ckpt_version = torch.load(artifact_path, map_location=map_location).get(Keys.NOVAE_VERSION, "unknown")
             raise ValueError(f"The model was trained with `novae=={ckpt_version}`, but your version is {__version__}")
 
-        model.mode.from_pretrained()
+        model.mode.as_pretrained()
         model._model_name = model_name
         return model
 
@@ -399,7 +399,6 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         assert (not zero_shot) or (reference is not None), "`reference=None` is not supported in zero-shot mode."
         assert adata is not None or self.adatas is not None, "No AnnData object found."
 
-        self.mode.zero_shot = zero_shot
         self.training = False
         self._parse_hardware_args(accelerator, num_workers, use_device=True)
 
@@ -414,8 +413,6 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         if self.mode.zero_shot:
             self.assign_to_kmeans_prototypes(adatas, reference)
-
-        utils.store_inference_mode(adatas, zero_shot=zero_shot)
 
     def assign_to_kmeans_prototypes(
         self, adatas: AnnData | list[AnnData], reference: str | int | Literal["all", "largest"]
@@ -432,6 +429,9 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         for adata in adatas:
             self._compute_leaves(adata, None, None)
+
+        utils.store_inference_mode(adatas, zero_shot=True)
+        self.mode.as_zero_shot()
 
     @torch.no_grad()
     def _compute_representations_datamodule(
@@ -652,7 +652,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             min_prototypes_ratio: Minimum ratio of prototypes to be used for each slide. Use a low value to get highly slide-specific or condition-specific prototypes.
             **fit_kwargs: Optional kwargs for the [novae.Novae.fit][] method.
         """
-        self.mode.fine_tune()
+        self.mode.as_fine_tuned()
         self._parse_hardware_args(accelerator, num_workers, use_device=True)
 
         assert adata is not None, "Please provide an AnnData object to fine-tune the model."
@@ -704,7 +704,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             logger: The pytorch lightning logger.
             **trainer_kwargs: Optional kwargs for the Pytorch Lightning `Trainer` class.
         """
-        self.mode.fit()
+        self.mode.as_fitted()
 
         if adata is not None:
             self.adatas = self._prepare_adatas(adata)
