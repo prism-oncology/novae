@@ -3,7 +3,7 @@ name = "novae"
 version = "1.0.6"
 description = "Graph-based foundation model for spatial transcriptomics data"
 authors = [{ name = "Quentin Blampey", email = "quentin.blampey@gmail.com" }]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 readme = "README.md"
 license = "BSD-3-Clause"
 classifiers = [
@@ -27,7 +27,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-sc-concept = ["sc-concept>=0.2.3"]
 multimodal = ["sopa>=2.2.1", "timm>=1.0.15"]
 conch = ["einops-exts>=0.0.4", "transformers<5.0.0,>=4.52.4"]
 llm = ["openai>=1.0.0", "anthropic>=0.46.0", "python-dotenv>=1.0.0"]
