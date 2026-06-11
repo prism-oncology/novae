@@ -10,17 +10,14 @@ from ..._constants import Keys
 log = logging.getLogger(__name__)
 
 
-def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) -> AnnData:
-    from huggingface_hub import hf_hub_download
+def _read_anndata_from_hub(
+    name: str, row: pd.Series, annotations: bool = False, embeddings: str | None = None
+) -> AnnData:
+    adata = _read_h5ad_from_hub(f"{row['species']}/{row['tissue']}/{name}.h5ad")
 
-    file_path = f"{row['species']}/{row['tissue']}/{name}.h5ad"
-    local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=file_path, repo_type="dataset")
-
-    adata = sc.read_h5ad(local_file)
-
-    if "slide_id" in adata.obs:
+    if "slide_id" in adata.obs:  # old datasets used "slide_id" instead of "novae_sid"
         adata.obs.rename(columns={"slide_id": Keys.SLIDE_ID}, inplace=True)
-    else:
+    elif Keys.SLIDE_ID not in adata.obs:
         adata.obs[Keys.SLIDE_ID] = pd.Series(name, index=adata.obs_names, dtype="category")
 
     if annotations:
@@ -32,7 +29,25 @@ def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) ->
         except Exception as e:
             log.warning(f"Failed to read annotations for {name}: {e}.")
 
+    if embeddings is not None:
+        try:
+            adata_embeddings = _read_h5ad_from_hub(f"embeddings/{embeddings}/{name}.h5ad")
+            obsm_key = adata_embeddings.uns[Keys.OBSM_KEY]
+            adata.obsm[obsm_key] = adata_embeddings.obsm[obsm_key]
+        except FileNotFoundError:
+            log.warning(f"Embeddings '{embeddings}' unavailable for {name}. They will not be added to the adata.obsm.")
+        except Exception as e:
+            log.warning(f"Failed to read embeddings '{embeddings}' for {name}: {e}.")
+
     return adata
+
+
+def _read_h5ad_from_hub(path: str) -> AnnData:
+    from huggingface_hub import hf_hub_download
+
+    local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=path, repo_type="dataset")
+
+    return sc.read_h5ad(local_file)
 
 
 def load_dataset(
@@ -43,6 +58,7 @@ def load_dataset(
     custom_filter: Callable[[pd.DataFrame], pd.Series] | None = None,
     top_k: int | None = None,
     annotations: bool = False,
+    embeddings: str | None = None,
     dry_run: bool = False,
 ) -> list[AnnData] | pd.DataFrame:
     """Automatically load slides from the Novae dataset repository.
@@ -59,6 +75,7 @@ def load_dataset(
         custom_filter: Custom filter function that takes the metadata DataFrame (see above link) and returns a boolean Series to decide which rows should be kept.
         top_k: Optional number of slides to keep. If `None`, keeps all slides.
         annotations: If `True`, this will add cell-type annotations and/or pre-computed novae spatial domains in `adata.obs`. Not all slides have these annotations available.
+        embeddings: Optional embedding type to load, e.g., `"corpus360M[multi-species]-model170M"` for scConcept embeddings.
         dry_run: If `True`, the function will only return the metadata of slides that match the filters.
 
     Returns:
@@ -99,4 +116,7 @@ def load_dataset(
         return cast(pd.DataFrame, metadata)
 
     log.info(f"Found {len(metadata)} h5ad file(s) matching the filters.")
-    return [_read_h5ad_from_hub(name, row, annotations=annotations) for name, row in metadata.iterrows()]
+    return [
+        _read_anndata_from_hub(name, row, annotations=annotations, embeddings=embeddings)
+        for name, row in metadata.iterrows()
+    ]
