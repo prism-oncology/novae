@@ -10,46 +10,6 @@ from ..._constants import Keys
 log = logging.getLogger(__name__)
 
 
-def _read_anndata_from_hub(
-    name: str, row: pd.Series, annotations: bool = False, embeddings: str | None = None
-) -> AnnData:
-    adata = _read_h5ad_from_hub(f"{row['species']}/{row['tissue']}/{name}.h5ad")
-
-    if "slide_id" in adata.obs:  # old datasets used "slide_id" instead of "novae_sid"
-        adata.obs.rename(columns={"slide_id": Keys.SLIDE_ID}, inplace=True)
-    elif Keys.SLIDE_ID not in adata.obs:
-        adata.obs[Keys.SLIDE_ID] = pd.Series(name, index=adata.obs_names, dtype="category")
-
-    if annotations:
-        try:
-            df_annot = pd.read_parquet(f"hf://datasets/prism-oncology/novae/annotations/{name}.parquet")
-            adata.obs[df_annot.columns] = df_annot
-        except FileNotFoundError:
-            log.warning(f"Annotations unavailable for {name}. They will not be added to the adata.obs.")
-        except Exception as e:
-            log.warning(f"Failed to read annotations for {name}: {e}.")
-
-    if embeddings is not None:
-        try:
-            adata_embeddings = _read_h5ad_from_hub(f"embeddings/{embeddings}/{name}.h5ad")
-            obsm_key = adata_embeddings.uns[Keys.OBSM_KEY]
-            adata.obsm[obsm_key] = adata_embeddings.obsm[obsm_key]
-        except FileNotFoundError:
-            log.warning(f"Embeddings '{embeddings}' unavailable for {name}. They will not be added to the adata.obsm.")
-        except Exception as e:
-            log.warning(f"Failed to read embeddings '{embeddings}' for {name}: {e}.")
-
-    return adata
-
-
-def _read_h5ad_from_hub(path: str) -> AnnData:
-    from huggingface_hub import hf_hub_download
-
-    local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=path, repo_type="dataset")
-
-    return sc.read_h5ad(local_file)
-
-
 def load_dataset(
     pattern: str | None = None,
     tissue: list[str] | str | None = None,
@@ -117,6 +77,52 @@ def load_dataset(
 
     log.info(f"Found {len(metadata)} h5ad file(s) matching the filters.")
     return [
-        _read_anndata_from_hub(name, row, annotations=annotations, embeddings=embeddings)
+        _read_anndata_from_hub(row["species"], row["tissue"], name, annotations=annotations, embeddings=embeddings)
         for name, row in metadata.iterrows()
     ]
+
+
+def _read_anndata_from_hub(
+    species: str,
+    tissue: str,
+    name: str,
+    annotations: bool = False,
+    embeddings: str | None = None,
+) -> AnnData:
+    from huggingface_hub.errors import EntryNotFoundError
+
+    adata = _read_h5ad_from_hub(f"{species}/{tissue}/{name}.h5ad")
+
+    if "slide_id" in adata.obs:  # old datasets used "slide_id" instead of "novae_sid"
+        adata.obs.rename(columns={"slide_id": Keys.SLIDE_ID}, inplace=True)
+    elif Keys.SLIDE_ID not in adata.obs:
+        adata.obs[Keys.SLIDE_ID] = pd.Series(name, index=adata.obs_names, dtype="category")
+
+    if annotations:
+        try:
+            df_annot = pd.read_parquet(f"hf://datasets/prism-oncology/novae/annotations/{name}.parquet")
+            adata.obs[df_annot.columns] = df_annot
+        except FileNotFoundError:
+            log.warning(f"Annotations unavailable for {name}. They will not be added to the adata.obs.")
+        except Exception as e:
+            log.warning(f"Failed to read annotations for {name}: {e}.")
+
+    if embeddings is not None:
+        try:
+            adata_embeddings = _read_h5ad_from_hub(f"embeddings/{embeddings}/{name}.h5ad")
+            obsm_key = adata_embeddings.uns[Keys.OBSM_KEY]
+            adata.obsm[obsm_key] = adata_embeddings.obsm[obsm_key]
+        except EntryNotFoundError:
+            log.warning(f"Embeddings '{embeddings}' unavailable for {name}. They will not be added to the adata.obsm.")
+        except Exception as e:
+            log.warning(f"Failed to read embeddings '{embeddings}' for {name}: {e}.")
+
+    return adata
+
+
+def _read_h5ad_from_hub(path: str) -> AnnData:
+    from huggingface_hub import hf_hub_download
+
+    local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=path, repo_type="dataset")
+
+    return sc.read_h5ad(local_file)
