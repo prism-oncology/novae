@@ -6,3 +6,4 @@ from .eval import (
     heuristic,
     mean_normalized_entropy,
 )
+from .spectral import spectral_stats
