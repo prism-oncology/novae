@@ -88,7 +88,7 @@ novae.settings.disable_multimodal = True
 ```
 
 ### Can I re-use a zero-shot model?
-Yes, since `novae==1.0.7`, you can save and re-load a novae model that was run in zero-shot, and the spatial-domains will be preserved. You can use it as a normal trained model (i.e., using `model.compute_representations(..., zero_shot=False)`).
+Yes, since `novae==1.1.0`, you can save and re-load a novae model that was run in zero-shot, and the spatial-domains will be preserved. You can use it as a normal trained model (i.e., using `model.compute_representations(..., zero_shot=False)`).
 
 !!! info
     As long as you don't fine-tune or re-run zero-shot, `assign_domains` will always return the same domain names.

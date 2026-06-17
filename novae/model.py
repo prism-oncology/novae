@@ -410,7 +410,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
                 datamodule = self._init_datamodule(adata)
                 self._compute_representations_datamodule(adata, datamodule)
 
-        if self.mode.zero_shot:
+        if zero_shot:
+            self.mode.as_zero_shot()
             self.assign_to_kmeans_prototypes(adatas, reference)
 
     def assign_to_kmeans_prototypes(
@@ -429,7 +430,6 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             self._compute_leaves(adata, None, None)
 
         utils.store_inference_mode(adatas, zero_shot=True)
-        self.mode.as_zero_shot()
 
     @torch.no_grad()
     def _compute_representations_datamodule(
