@@ -87,6 +87,12 @@ To force not using the multimodal mode although you already computed H&E embeddi
 novae.settings.disable_multimodal = True
 ```
 
+### Can I re-use a zero-shot model?
+Yes, since `novae==1.0.7`, you can save and re-load a novae model that was run in zero-shot, and the spatial-domains will be preserved. You can use it as a normal trained model (i.e., using `model.compute_representations(..., zero_shot=False)`).
+
+!!! info
+    As long as you don't fine-tune or re-run zero-shot, `assign_domains` will always return the same domain names.
+
 ### How long does it take to use Novae?
 
 The `pip` installation of Novae usually takes less than a minute on a standard laptop. The inference time depends on the number of cells, but typically takes 5-20 minutes on a CPUs, or 30sec to 2 minutes on a GPU (expect it to be roughly 10x times faster on a GPU).

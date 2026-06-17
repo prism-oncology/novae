@@ -6,7 +6,7 @@ Here, we list some advice to help you get the best out of Novae.
 When you have many slides, it's recommended to train or fine-tune Novae only on the good quality slides and run inference (i.e., spatial domain assignment) on all slides. This allows noise removal in the model training while still applying Novae to the low quality slides.
 
 ### Resolution or level
-When running [`assign_domains`](../api/Novae/#novae.Novae.assign_domains) in **zero-shot**, it's generally better to use the `resolution` argument. When fine-tuning or re-training a Novae model, using `level` is recommended.
+When running [`assign_domains`](../api/Novae/#novae.Novae.assign_domains) in **zero-shot**, it's generally better to use the `resolution` argument. When fine-tuning or re-training a Novae model, both `level` and `resolution` are recommended (depending whether you need hierarchies of domains).
 
 !!! info
     An advantage of using `level` is that the domains will be nested through the different levels — we don't have such a property using the `resolution` argument.
@@ -26,8 +26,15 @@ If you have a rare tissue or a tissue that was not used in our large dataset, yo
 ### Using references
 For the zero-shot and fine-tuning modes, you can provide a `reference` slide (or multiple slides). This allows to recompute the model prototypes (i.e., the centroids of the spatial domains) based on the chosen slides.
 
-- For [zero-shot](../api/Novae/#novae.Novae.compute_representations), we use `reference="all"` by default, meaning we use all slides to recompute the prototypes. Depending on your use case, you may consider specifying one or multiple **representative** slides.
+- For [zero-shot](../api/Novae/#novae.Novae.compute_representations), we use `reference="all"` by default, meaning we use all slides to recompute the prototypes. Depending on your use case, you may consider specifying one or multiple **representative** slides (see how to to that below).
 - For [fine-tuning](../api/Novae/#novae.Novae.fine_tune), we use `reference=None` by default, meaning we will initialize the prototypes randomly, and re-train them. If you have only one slide (or if you know what you're doing), it might be worth trying `reference="all"`, but we usually recommend sticking to the default value.
+
+!!! info
+    Other `reference` options include:
+
+    - `reference="largest"` to choose the slide with the highest number of cells.
+    - `reference="slide_name"` or `reference=["slide_name1", "slide_name2"]` to select slides by their novae-ID. If you provided a `slide_key` to [`novae.spatial_neighbors`](../api/utils/#novae.spatial_neighbors) then the ID is the one from your `slide_key`, else look at the slide ID in `adata.obs["novae_sid"]`.
+    - `reference=2` or `reference=[2, 3, 5]` to select slides by the index within the list of slides if you're using a `list[AnnData]`
 
 ### Handling large datasets
 

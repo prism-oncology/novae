@@ -4,8 +4,10 @@ import math
 import lightning as L
 import numpy as np
 import pandas as pd
+import scanpy as sc
 import torch
 import torch.nn.functional as F
+from anndata import AnnData
 from sklearn.cluster import AgglomerativeClustering, KMeans
 from torch import Tensor, nn
 
@@ -43,8 +45,6 @@ class SwavHead(L.LightningModule):
         self.normalize_prototypes()
         self.min_prototypes = 0
 
-        self._kmeans_prototypes: nn.Parameter | None = None
-
         self.queue = None
 
         self.reset_clustering()
@@ -71,7 +71,7 @@ class SwavHead(L.LightningModule):
 
     @torch.no_grad()
     def normalize_prototypes(self):
-        self.prototypes.data = F.normalize(self.prototypes.data, dim=1, p=2)
+        self._prototypes.data = F.normalize(self._prototypes.data, dim=1, p=2)
 
     def forward(self, z1: Tensor, z2: Tensor, slide_id: str | None) -> tuple[Tensor, Tensor]:
         """Compute the SwAV loss for two batches of neighborhood graph views.
@@ -112,7 +112,7 @@ class SwavHead(L.LightningModule):
             The projections of size `(B, K)`.
         """
         z_normalized = F.normalize(z, dim=1, p=2)
-        return z_normalized @ self.prototypes.T
+        return z_normalized @ self._prototypes.T
 
     @torch.no_grad()
     def prototype_ilocs(self, projections: Tensor, slide_id: str | None = None) -> Tensor:
@@ -184,7 +184,7 @@ class SwavHead(L.LightningModule):
 
         return Q / Q.sum(dim=1, keepdim=True)  # ensure rows sum to 1 (for cross-entropy loss)
 
-    def compute_kmeans_prototypes(self, latent: np.ndarray) -> nn.Parameter:
+    def update_kmeans_prototypes(self, latent: np.ndarray) -> None:
         assert len(latent) >= self.num_prototypes, (
             f"The number of valid cells ({len(latent)}) must be greater than the number of prototypes ({self.num_prototypes})."
         )
@@ -195,63 +195,58 @@ class SwavHead(L.LightningModule):
         kmeans_prototypes = kmeans.fit(X).cluster_centers_
         kmeans_prototypes = kmeans_prototypes / (Nums.EPS + np.linalg.norm(kmeans_prototypes, axis=1)[:, None])
 
-        return torch.nn.Parameter(torch.tensor(kmeans_prototypes))
+        self._prototypes = torch.nn.Parameter(torch.tensor(kmeans_prototypes))
 
-    @property
-    def prototypes(self) -> nn.Parameter:
-        return self._kmeans_prototypes if self.mode.zero_shot else self._prototypes
+        self.reset_clustering()
 
     @property
     def clustering(self) -> AgglomerativeClustering:
-        clustering_attr = self.mode.clustering_attr
-
-        if getattr(self, clustering_attr) is None:
+        if self._clustering is None:
             self.hierarchical_clustering()
-
-        return getattr(self, clustering_attr)
+        return self._clustering
 
     @property
     def clusters_levels(self) -> np.ndarray:
-        clusters_levels_attr = self.mode.clusters_levels_attr
-
-        if getattr(self, clusters_levels_attr) is None:
+        if self._clusters_levels is None:
             self.hierarchical_clustering()
+        return self._clusters_levels
 
-        return getattr(self, clusters_levels_attr)
-
-    def reset_clustering(self, only_zero_shot: bool = False) -> None:
-        attrs = self.mode.zero_shot_clustering_attrs if only_zero_shot else self.mode.all_clustering_attrs
-        for attr in attrs:
-            setattr(self, attr, None)
-
-    def set_clustering(self, clustering: None, clusters_levels: None) -> None:
-        setattr(self, self.mode.clustering_attr, clustering)
-        setattr(self, self.mode.clusters_levels_attr, clusters_levels)
+    def reset_clustering(self) -> None:
+        self._clustering = None
+        self._clusters_levels = None
 
     def hierarchical_clustering(self) -> None:
         """
         Perform hierarchical clustering on the prototypes. Saves the full tree of clusters.
         """
-        X = self.prototypes.data.numpy(force=True)  # (K, O)
+        X = self._prototypes.data.numpy(force=True)  # (K, O)
 
-        _clustering = AgglomerativeClustering(
+        self._clustering = AgglomerativeClustering(
             n_clusters=None,
             distance_threshold=0,
             compute_full_tree=True,
             metric="cosine",
             linkage="average",
         )
-        _clustering.fit(X)
+        self._clustering.fit(X)
 
-        _clusters_levels = np.zeros((len(X), len(X)), dtype=np.uint16)
-        _clusters_levels[0] = np.arange(len(X))
+        self._clusters_levels = np.zeros((len(X), len(X)), dtype=np.uint16)
+        self._clusters_levels[0] = np.arange(len(X))
 
-        for i, (a, b) in enumerate(_clustering.children_):
-            clusters = _clusters_levels[i]
-            _clusters_levels[i + 1] = clusters
-            _clusters_levels[i + 1, np.where((clusters == a) | (clusters == b))] = len(X) + i
+        for i, (a, b) in enumerate(self._clustering.children_):
+            clusters = self._clusters_levels[i]
+            self._clusters_levels[i + 1] = clusters
+            self._clusters_levels[i + 1, np.where((clusters == a) | (clusters == b))] = len(X) + i
 
-        self.set_clustering(_clustering, _clusters_levels)
+    @torch.no_grad()
+    def leiden_clustering(self, resolution: float = 1) -> np.ndarray:
+        adata_proto = AnnData(self._prototypes.numpy(force=True))
+
+        sc.pp.pca(adata_proto)
+        sc.pp.neighbors(adata_proto)
+        sc.tl.leiden(adata_proto, flavor="igraph", resolution=resolution)
+
+        return adata_proto.obs["leiden"].values.codes
 
     def map_leaves_domains(self, series: pd.Series, level: int) -> pd.Series:
         """Map leaves to the parent domain from the corresponding level of the hierarchical tree.
