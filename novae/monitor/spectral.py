@@ -5,20 +5,28 @@ from .._constants import Nums
 
 
 @torch.no_grad()
-def spectral_stats(z: torch.Tensor) -> dict[str, float | np.ndarray]:
-    z = z - z.mean(0, keepdim=True)
+def spectral_stats(z: np.ndarray) -> tuple[float, float, np.ndarray]:
+    """Compute spectral statistics on a batch of embeddings.
+
+    Args:
+        z: A batch of embeddings of size `(B, O)`.
+
+    Returns:
+        A tuple containing:
+        - participation_ratio: The participation ratio of the eigenvalues.
+        - erank: The effective rank of the covariance matrix.
+        - eigvals: The eigenvalues of the covariance matrix.
+    """
+    z = z / np.linalg.norm(z, axis=1, keepdims=True)
+    z = z - z.mean(0, keepdims=True)
     cov = z.T @ z / (z.shape[0] - 1)
 
-    eigvals: torch.Tensor = torch.linalg.eigvalsh(cov)
-    eigvals = eigvals.clamp(min=0)
+    eigvals = np.linalg.eigvalsh(cov)
+    eigvals: np.ndarray = eigvals.clip(min=0)
 
-    participation_ratio = eigvals.sum() ** 2 / eigvals.square().sum()
+    participation_ratio = eigvals.sum() ** 2 / (eigvals**2).sum()
 
-    p = eigvals / eigvals.sum()
-    erank = torch.exp(-(p * (p + Nums.EPS).log()).sum())
+    p: np.ndarray = eigvals / eigvals.sum()
+    erank = np.exp(-(p * np.log(p + Nums.EPS)).sum())
 
-    return {
-        "participation_ratio": participation_ratio.item(),
-        "effective_rank": erank.item(),
-        "eigvals": eigvals.numpy(force=True),
-    }
+    return participation_ratio, erank, eigvals[::-1]

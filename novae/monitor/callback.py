@@ -10,6 +10,7 @@ from .._constants import Keys
 from ..model import Novae
 from .eval import heuristic, mean_fide_score
 from .log import log_plt_figure, save_pdf_figure
+from .spectral import spectral_stats
 
 
 class LogProtoCovCallback(Callback):
@@ -62,13 +63,17 @@ class ValidationCallback(Callback):
         )
         model.swav_head.hierarchical_clustering()
 
+        ### Hierachical clustering ###
+
         obs_key = model.assign_domains(self.adata, n_domains=self.k)
 
+        # Spatial plot
         plt.figure()
         sc.pl.spatial(self.adata, color=obs_key, spot_size=20, img_key=None, show=False)
         slide_name_key = self.slide_name_key if self.slide_name_key in self.adata.obs else Keys.SLIDE_ID
         log_plt_figure(f"val_{self.k}_{self.adata.obs[slide_name_key].iloc[0]}")
 
+        ### Metrics
         fide = mean_fide_score(self.adata, obs_key=obs_key, n_classes=self.k)
         model.log("metrics/val_mean_fide_score", fide)
 
@@ -78,12 +83,15 @@ class ValidationCallback(Callback):
         self._max_heuristic = max(self._max_heuristic, heuristic_)
         model.log("metrics/val_max_heuristic", self._max_heuristic)
 
+        ### Leiden clustering ###
         obs_key = model.assign_domains(self.adata, resolution=self.res)
 
+        # Spatial plot
         plt.figure()
         sc.pl.spatial(self.adata, color=obs_key, spot_size=20, img_key=None, show=False)
         log_plt_figure(f"val_res{self.res}_{self.adata.obs[slide_name_key].iloc[0]}")
 
+        # Metrics
         fide = mean_fide_score(self.adata, obs_key=obs_key)
         model.log(f"metrics/val_mean_fide_score_res{self.res}", fide)
 
@@ -92,6 +100,17 @@ class ValidationCallback(Callback):
         model.log(f"metrics/val_heuristic_res{self.res}", heuristic_)
 
         model.mode.zero_shot = False
+
+        ### Spectral statistics
+        participation_ratio, effective_rank, eigvals = spectral_stats(self.adata.obsm[Keys.REPR])
+
+        model.log("metrics/val_participation_ratio", participation_ratio)
+        model.log("metrics/val_effective_rank", effective_rank)
+
+        plt.bar(range(len(eigvals)), eigvals)
+        plt.xlabel("Eigenvalue index")
+        plt.ylabel("Eigenvalue magnitude")
+        log_plt_figure("eigvals")
 
 
 class PrototypeUMAPCallback(Callback):
