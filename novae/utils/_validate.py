@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 def prepare_adatas(
     adata: AnnData | list[AnnData] | None,
-    var_names: set | list[str] | None = None,
+    var_names: list[str] | None = None,
     embedding_name: str | None = None,
 ) -> tuple[list[AnnData] | None, list[str]]:
     """Ensure the AnnData objects are ready to be used by the model.

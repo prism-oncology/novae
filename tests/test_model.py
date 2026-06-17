@@ -216,6 +216,7 @@ def test_saved_model_identical(slide_key: str | None, scgpt_model_dir: str | Non
         scgpt_model_dir=scgpt_model_dir,
     )
 
+    assert model.cell_embedder is not None
     assert model.cell_embedder.embedding.weight.requires_grad is (scgpt_model_dir is None)
 
     model._datamodule = model._init_datamodule()

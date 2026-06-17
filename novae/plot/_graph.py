@@ -113,7 +113,7 @@ def paga(adata: AnnData, obs_key: str | None = None, show: bool = True, **paga_p
 
 
 def connectivities(
-    adata: AnnData,
+    adata: AnnData | list[AnnData],
     ngh_threshold: int | None = 2,
     cell_size: int = 2,
     ncols: int = 4,
@@ -135,7 +135,7 @@ def connectivities(
         Conversely, if there are some less that are really **far from each other**, but still connected, so may want to decrease the `radius` parameter to **disconnect** them.
 
     Args:
-        adata: An AnnData object.
+        adata: An AnnData object or a list of AnnData objects.
         ngh_threshold: Only cells with a number of neighbors below this threshold are shown (with color `color_isolated_cells`). If `None`, cells are colored by the number of neighbors.
         cell_size: Size of the dots for each cell. By default, it uses the median distance between neighbor cells.
         ncols: Number of columns to be shown.
