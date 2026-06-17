@@ -6,7 +6,6 @@ from typing import Literal
 
 import lightning as L
 import numpy as np
-import scanpy as sc
 import torch
 from anndata import AnnData
 from huggingface_hub import PyTorchModelHubMixin
@@ -149,7 +148,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             self._prepare_adatas(utils.get_reference(adata, reference)), sample_cells=Nums.DEFAULT_SAMPLE_CELLS
         )
         latent = self._compute_representations_datamodule(None, datamodule, return_representations=True)
-        self.swav_head._prototypes = self.swav_head.compute_kmeans_prototypes(latent)
+        self.swav_head.update_kmeans_prototypes(latent)
 
     def __repr__(self) -> str:
         info_dict: dict[str, int | str | bool | None] = {
@@ -280,7 +279,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         self.datamodule.dataset.shuffle_obs_ilocs()
 
         after_warm_up = self.current_epoch >= Nums.WARMUP_EPOCHS
-        self.swav_head.prototypes.requires_grad_(after_warm_up or self.mode.pretrained)
+        self.swav_head._prototypes.requires_grad_(after_warm_up or self.mode.pretrained)
 
     def _log_progress_bar(self, name: str, value: float, on_epoch: bool = True, prog_bar: bool = True, **kwargs):
         self.log(
@@ -414,8 +413,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         adatas_refs = [adatas_refs] if isinstance(adatas_refs, AnnData) else adatas_refs
 
         latent = np.concatenate([adata.obsm[Keys.REPR][utils.valid_indices(adata)] for adata in adatas_refs])
-        self.swav_head._kmeans_prototypes = self.swav_head.compute_kmeans_prototypes(latent)
-        self.swav_head.reset_clustering(only_zero_shot=True)
+        self.swav_head.update_kmeans_prototypes(latent)
 
         for adata in adatas:
             self._compute_leaves(adata, None, None)
@@ -512,7 +510,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         plot._weights_clustermap(weights, self.adatas, list(self.swav_head.slide_label_encoder.keys()), **kwargs)
 
     def plot_prototype_covariance(self, vmax: float | None = None, **kwargs):
-        covariance = np.cov(self.swav_head.prototypes.data.numpy(force=True))
+        covariance = np.cov(self.swav_head._prototypes.data.numpy(force=True))
 
         vmax = vmax or covariance.max()
 
@@ -557,7 +555,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         )
 
         if resolution is not None:
-            _leiden_codes = self._leiden_prototypes(resolution=resolution)
+            _leiden_codes = self.swav_head.leiden_clustering(resolution=resolution)
 
             key_added = f"{Keys.DOMAINS_PREFIX}res{resolution}"
 
@@ -585,18 +583,6 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             adata.obs[key_added] = adata.obs[key_added].astype("category")
 
         return key_added
-
-    @torch.no_grad()
-    def _leiden_prototypes(self, resolution: float = 1, return_codes: bool = True) -> AnnData | np.ndarray:
-        adata_proto = AnnData(self.swav_head.prototypes.numpy(force=True))
-
-        sc.pp.pca(adata_proto)
-        sc.pp.neighbors(adata_proto)
-        sc.tl.leiden(adata_proto, flavor="igraph", resolution=resolution)
-
-        if return_codes:
-            return adata_proto.obs["leiden"].values.codes
-        return adata_proto
 
     def batch_effect_correction(self, adata: AnnData | list[AnnData] | None = None, obs_key: str | None = None):
         """Correct batch effects from the spatial representations of cells.

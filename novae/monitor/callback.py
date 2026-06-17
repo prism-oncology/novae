@@ -14,7 +14,7 @@ from .log import log_plt_figure, save_pdf_figure
 
 class LogProtoCovCallback(Callback):
     def on_train_epoch_end(self, trainer: Trainer, model: Novae) -> None:
-        C = model.swav_head.prototypes.data.numpy(force=True)
+        C = model.swav_head._prototypes.data.numpy(force=True)
 
         plt.figure(figsize=(10, 10))
         sns.clustermap(np.cov(C))
@@ -99,7 +99,7 @@ class PrototypeUMAPCallback(Callback):
     LEVEL: int = 15
 
     def on_train_epoch_end(self, trainer: Trainer, model: Novae):
-        adata_proto = AnnData(model.swav_head.prototypes.data.numpy(force=True))
+        adata_proto = AnnData(model.swav_head._prototypes.data.numpy(force=True))
 
         sc.pp.neighbors(adata_proto)
         sc.tl.umap(adata_proto)
