@@ -234,7 +234,7 @@ class SwavHead(L.LightningModule):
         self._clusters_levels[0] = np.arange(len(X))
 
         for i, (a, b) in enumerate(self._clustering.children_):
-            clusters = self._clusters_levels[i]
+            clusters: np.ndarray = self._clusters_levels[i]
             self._clusters_levels[i + 1] = clusters
             self._clusters_levels[i + 1, np.where((clusters == a) | (clusters == b))] = len(X) + i
 

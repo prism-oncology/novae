@@ -164,8 +164,8 @@ def _spatial_neighbor(
     adata: AnnData,
     spatial_key: str = "spatial",
     coord_type: str | CoordType | None = None,
-    n_neighs: int = 6,
-    radius: float | tuple[float, float] | None = None,
+    n_neighs: int | None = 6,
+    radius: float | tuple[float, float] | list[float | int] | None = None,
     delaunay: bool = False,
     n_rings: int = 1,
     set_diag: bool = False,
@@ -206,7 +206,7 @@ def _spatial_neighbor(
 
 
 def _build_grid(
-    coords: np.ndarray, n_neighs: int, n_rings: int, delaunay: bool = False, set_diag: bool = False
+    coords: np.ndarray, n_neighs: int | None, n_rings: int, delaunay: bool = False, set_diag: bool = False
 ) -> tuple[csr_matrix, csr_matrix]:
     if n_rings > 1:
         Adj: csr_matrix = _build_connectivity(
@@ -242,7 +242,7 @@ def _build_grid(
 
 def _build_connectivity(
     coords: np.ndarray,
-    n_neighs: int,
+    n_neighs: int | None,
     radius: float | tuple[float, float] | None = None,
     delaunay: bool = False,
     neigh_correct: bool = False,

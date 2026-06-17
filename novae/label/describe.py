@@ -15,7 +15,7 @@ def domains_description(
     obs_key: str,
     domain_ids: list[str],
     cell_type_key: str | None,
-    pathways: list[str] | None,
+    pathways: dict[str, list[str]] | str | None,
     n_genes: int,
 ) -> str:
     sections: list[str] = [
@@ -124,8 +124,12 @@ def _cell_type_description(
     return "Cell-type composition per domain:\n" + "\n".join(lines)
 
 
-def _pathway_description(adata: AnnData, obs_key: str, domain_ids: list[str], pathways: list[str]) -> str:
-    pathway_scores = plot.pathway_scores(adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True)
+def _pathway_description(
+    adata: AnnData, obs_key: str, domain_ids: list[str], pathways: dict[str, list[str]] | str
+) -> str:
+    pathway_scores: pd.DataFrame = plot.pathway_scores(
+        adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True
+    )
 
     lines = []
     for domain_id in domain_ids:

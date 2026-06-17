@@ -119,7 +119,7 @@ def domains(
 
 
 def _spatial_raster(
-    adata: AnnData, obs_key: str, s: float, ax: plt.Axes, na_color: str, interpolation: str = "nearest"
+    adata: AnnData, obs_key: str, s: float | int, ax: plt.Axes, na_color: str, interpolation: str = "nearest"
 ):
     x, y = adata.obsm["spatial"].T
     domains = adata.obs[obs_key]

@@ -40,7 +40,7 @@ def lower_var_names(var_names: pd.Index | list[str]) -> pd.Index | list[str]:
 def fill_invalid_indices(
     out: np.ndarray,
     n_obs: int,
-    valid_indices: list[int],
+    valid_indices: np.ndarray,
     fill_value: float | str = np.nan,
     dtype: object = None,
 ) -> np.ndarray:

@@ -10,7 +10,7 @@ from ..._constants import Keys
 log = logging.getLogger(__name__)
 
 
-def load_local_dataset(path: str) -> list[AnnData]:
+def load_local_dataset(path: Path | str) -> list[AnnData]:
     """Load one or multiple AnnData objects based on a relative path from the data directory.
 
     Args:

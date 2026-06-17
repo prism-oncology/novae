@@ -25,7 +25,7 @@ def api_request(
 
     return api_request_func(
         model=model,
-        api_key=_validate_api_key(api_key, env_var=env_var, provider=provider),
+        api_key=_validate_api_key(api_key, env_var, provider=provider),
         messages=messages,
         max_tokens=max_tokens,
         output_schema=output_schema,
@@ -33,7 +33,7 @@ def api_request(
     )
 
 
-def _validate_api_key(api_key: str | None, env_var: str | None = None, provider: str | None = None) -> str:
+def _validate_api_key(api_key: str | None, env_var: str, provider: str | None = None) -> str:
     if api_key is None:
         api_key = getenv(env_var)
         assert api_key is not None, f"{provider} API key is required. Provide `api_key` or set `{env_var}`."
