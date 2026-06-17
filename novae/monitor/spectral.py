@@ -18,8 +18,7 @@ def spectral_stats(z: np.ndarray) -> tuple[float, float, np.ndarray]:
         - eigvals: The eigenvalues of the covariance matrix.
     """
     z = z / np.linalg.norm(z, axis=1, keepdims=True)
-    z = z - z.mean(0, keepdims=True)
-    cov = z.T @ z / (z.shape[0] - 1)
+    cov = np.cov(z.T)
 
     eigvals = np.linalg.eigvalsh(cov)
     eigvals: np.ndarray = eigvals.clip(min=0)
