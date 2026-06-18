@@ -302,6 +302,21 @@ def test_reset_clusters_zero_shot():
     assert not (model.swav_head.clusters_levels == clusters_levels).all()
 
 
+def test_kmeans_prototype_updates_leaves():
+    adatas = novae.toy_dataset(compute_spatial_neighbors=True)
+
+    model = novae.Novae(adatas, num_prototypes=50)
+    model.mode.trained = True
+
+    model.compute_representations(adatas)
+    novae_leaves = adatas[0].obs[Keys.LEAVES].copy()
+
+    model.assign_to_kmeans_prototypes(adatas, reference="largest")
+    novae_leaves2 = adatas[0].obs[Keys.LEAVES].copy()
+
+    assert not novae_leaves.equals(novae_leaves2)
+
+
 def test_var_name_subset():
     adata = AnnData(np.random.rand(10, 30))
     adata.var_names = [f"GENE{i}" for i in range(30)]
