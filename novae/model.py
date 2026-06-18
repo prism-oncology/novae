@@ -411,13 +411,14 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
                 self._compute_representations_datamodule(adata, datamodule)
 
         if zero_shot:
-            self.mode.as_zero_shot()
             self.assign_to_kmeans_prototypes(adatas, reference)
 
     def assign_to_kmeans_prototypes(
         self, adatas: AnnData | list[AnnData], reference: str | int | Literal["all", "largest"]
     ):
         """Compute prototypes based on the latent representations, and assign each cell to a leaf."""
+        self.mode.as_zero_shot()
+
         adatas = [adatas] if isinstance(adatas, AnnData) else adatas
 
         adatas_refs = utils.get_reference(adatas, reference)
