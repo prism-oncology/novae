@@ -418,6 +418,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         self, adatas: AnnData | list[AnnData], reference: str | int | Literal["all", "largest"]
     ):
         """Compute prototypes based on the latent representations, and assign each cell to a leaf."""
+        log.info(f"Updating the prototypes using {reference=} and assigning each cell to a leaf.")
         self.mode.as_zero_shot()
 
         adatas = [adatas] if isinstance(adatas, AnnData) else adatas
