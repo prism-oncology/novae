@@ -19,6 +19,7 @@ tests/*
 
 # Documentation
 site
+local_model_path
 
 # Logs
 outputs
