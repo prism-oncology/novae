@@ -190,9 +190,9 @@ class SwavHead(L.LightningModule):
         )
 
         kmeans = KMeans(n_clusters=self.num_prototypes, random_state=0, n_init="auto")
-        X = latent / (Nums.EPS + np.linalg.norm(latent, axis=1)[:, None])
+        X: np.ndarray = latent / (Nums.EPS + np.linalg.norm(latent, axis=1)[:, None])
 
-        kmeans_prototypes = kmeans.fit(X).cluster_centers_
+        kmeans_prototypes = kmeans.fit(X.astype(np.float64)).cluster_centers_
         kmeans_prototypes = kmeans_prototypes / (Nums.EPS + np.linalg.norm(kmeans_prototypes, axis=1)[:, None])
 
         self._prototypes = torch.nn.Parameter(torch.tensor(kmeans_prototypes))
