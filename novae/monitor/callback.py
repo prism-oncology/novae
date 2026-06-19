@@ -1,4 +1,3 @@
-import copy
 import logging
 
 import matplotlib.pyplot as plt
@@ -57,22 +56,23 @@ class ValidationCallback(Callback):
 
         self._max_heuristic = 0.0
 
-    def on_train_epoch_end(self, trainer: Trainer, model_: Novae):
+    def on_train_epoch_end(self, trainer: Trainer, model: Novae):
         if self.adata is None:
             return
 
-        model = copy.deepcopy(model_)  # avoid to modify prototypes from the original model during validation
+        ### Copy to avoid updating the current model with the zero-shot
+        model.save_pretrained(".tmp_model_checkpoint")
+        model_copy = Novae.from_pretrained(".tmp_model_checkpoint")
+        model_copy.mode.trained = True  # trick to avoid assert error in compute_representations
 
-        model.mode.trained = True  # trick to avoid assert error in compute_representations
-
-        model.compute_representations(
+        model_copy.compute_representations(
             self.adata, accelerator=self.accelerator, num_workers=self.num_workers, zero_shot=True
         )
-        model.swav_head.hierarchical_clustering()
 
         ### Hierachical clustering ###
 
-        obs_key = model.assign_domains(self.adata, n_domains=self.k)
+        model_copy.swav_head.hierarchical_clustering()
+        obs_key = model_copy.assign_domains(self.adata, n_domains=self.k)
 
         # Spatial plot
         plt.figure()
@@ -91,7 +91,7 @@ class ValidationCallback(Callback):
         model.log("metrics/val_max_heuristic", self._max_heuristic)
 
         ### Leiden clustering ###
-        obs_key = model.assign_domains(self.adata, resolution=self.res)
+        obs_key = model_copy.assign_domains(self.adata, resolution=self.res)
 
         # Spatial plot
         plt.figure()
@@ -105,8 +105,6 @@ class ValidationCallback(Callback):
         n_classes = len(self.adata.obs[obs_key].cat.categories)
         heuristic_ = heuristic(self.adata, obs_key=obs_key, n_classes=n_classes)
         model.log(f"metrics/val_heuristic_res{self.res}", heuristic_)
-
-        model.mode.zero_shot = False
 
         ### Spectral statistics
         try:
