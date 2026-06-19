@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import matplotlib.pyplot as plt
@@ -56,9 +57,11 @@ class ValidationCallback(Callback):
 
         self._max_heuristic = 0.0
 
-    def on_train_epoch_end(self, trainer: Trainer, model: Novae):
+    def on_train_epoch_end(self, trainer: Trainer, model_: Novae):
         if self.adata is None:
             return
+
+        model = copy.deepcopy(model_)  # avoid to modify prototypes from the original model during validation
 
         model.mode.trained = True  # trick to avoid assert error in compute_representations
 
