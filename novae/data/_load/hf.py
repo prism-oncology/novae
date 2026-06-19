@@ -97,6 +97,7 @@ def _read_anndata_from_hub(
         adata.obs.rename(columns={"slide_id": Keys.SLIDE_ID}, inplace=True)
     elif Keys.SLIDE_ID not in adata.obs:
         adata.obs[Keys.SLIDE_ID] = pd.Series(name, index=adata.obs_names, dtype="category")
+    adata.obs["name"] = pd.Series(name, index=adata.obs_names, dtype="category")
 
     if annotations:
         try:
