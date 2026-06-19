@@ -1,3 +1,5 @@
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scanpy as sc
@@ -11,6 +13,8 @@ from ..model import Novae
 from .eval import heuristic, mean_fide_score
 from .log import log_plt_figure, save_pdf_figure
 from .spectral import spectral_stats
+
+log = logging.getLogger(__name__)
 
 
 class LogProtoCovCallback(Callback):
@@ -102,15 +106,18 @@ class ValidationCallback(Callback):
         model.mode.zero_shot = False
 
         ### Spectral statistics
-        participation_ratio, effective_rank, eigvals = spectral_stats(self.adata.obsm[Keys.REPR])
+        try:
+            participation_ratio, effective_rank, eigvals = spectral_stats(self.adata.obsm[Keys.REPR])
 
-        model.log("metrics/val_participation_ratio", participation_ratio)
-        model.log("metrics/val_effective_rank", effective_rank)
+            model.log("metrics/val_participation_ratio", participation_ratio)
+            model.log("metrics/val_effective_rank", effective_rank)
 
-        plt.bar(range(len(eigvals)), eigvals)
-        plt.xlabel("Eigenvalue index")
-        plt.ylabel("Eigenvalue magnitude")
-        log_plt_figure("eigvals")
+            plt.bar(range(len(eigvals)), eigvals)
+            plt.xlabel("Eigenvalue index")
+            plt.ylabel("Eigenvalue magnitude")
+            log_plt_figure("eigvals")
+        except Exception as e:
+            log.info(f"Error computing spectral statistics: {e}")
 
 
 class PrototypeUMAPCallback(Callback):
