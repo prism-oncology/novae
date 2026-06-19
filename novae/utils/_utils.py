@@ -98,7 +98,7 @@ def pretty_model_repr(info_dict: dict[str, int | str | bool | None]) -> str:
     width = max(len(line) for line in lines)
 
     rows = [
-        f"╭─{' Novae '.ljust(width, '─')}-╮",
+        f"╭─{' Novae '.ljust(width, '─')}─╮",
         *[f"│ {line.ljust(width)} │" for line in lines],
         f"╰{'─' * (width + 2)}╯",
     ]
