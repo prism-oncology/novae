@@ -472,7 +472,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         if projections is None:
             valid_indices = utils.valid_indices(adata)
-            representations = torch.tensor(adata.obsm[Keys.REPR][valid_indices])
+            representations = torch.tensor(adata.obsm[Keys.REPR][valid_indices], device=self.device)
             projections = self.swav_head.projection(representations).numpy(force=True)
 
         leaves_predictions = projections.argmax(axis=1)
