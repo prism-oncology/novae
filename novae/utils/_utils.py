@@ -93,9 +93,17 @@ def pretty_num_parameters(model: torch.nn.Module) -> str:
     return f"{n_params / 1_000_000:.1f}M"
 
 
-def pretty_model_repr(info_dict: dict[str, int | str | bool | None], model_name: str = "Novae") -> str:
-    rows = [f"{model_name} model"] + [f"{k}: {v}" for k, v in info_dict.items() if v is not None]
-    return "\n   ├── ".join(rows[:-1]) + "\n   └── " + rows[-1]
+def pretty_model_repr(info_dict: dict[str, int | str | bool | None]) -> str:
+    lines = [f"{k}: {v}" for k, v in info_dict.items() if v is not None]
+    width = max(len(line) for line in lines)
+
+    rows = [
+        f"╭─{' Novae '.ljust(width, '─')}-╮",
+        *[f"│ {line.ljust(width)} │" for line in lines],
+        f"╰{'─' * (width + 2)}╯",
+    ]
+
+    return "\n".join(rows)
 
 
 def iter_slides(adatas: AnnData | list[AnnData]):
