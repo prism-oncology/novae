@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,6 +18,9 @@ from .._constants import Keys
 from ._utils import _get_default_cell_size, _subplots_per_slide, get_categorical_color_palette
 
 log = logging.getLogger(__name__)
+
+
+warnings.filterwarnings("ignore", message="Use `squidpy.pl.spatial_scatter` instead.", category=FutureWarning)
 
 
 def domains(
