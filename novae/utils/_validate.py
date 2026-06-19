@@ -308,10 +308,13 @@ def check_model_name(model_name: str | Path) -> None:
             raise ValueError(
                 f"Model name or path '{model_name}' not found locally. Please provide a valid local path, or use a model from Hugging Face Hub (see https://huggingface.co/collections/prism-oncology/novae)."
             )
-    else:
-        assert isinstance(model_name, str), "Model name must be a string when loading from Hugging Face Hub"
+        return
 
-        if model_name[-2:] != "-0":  # only v0 pretrained models are supported by this version
-            raise ValueError(
-                f"Model name {model_name} either (i) not existing or (ii) not supported for `novae=={__version__}` (please upgrade)"
-            )
+    assert isinstance(model_name, str), "Model name must be a string when loading from Hugging Face Hub"
+
+    if model_name == "prism-oncology/novae-scConcept-multi-species":
+        return
+    if model_name[-2:] != "-0":  # v0 models
+        raise ValueError(
+            f"Model name {model_name} either (i) not existing or (ii) not supported by `novae=={__version__}` (please upgrade)"
+        )

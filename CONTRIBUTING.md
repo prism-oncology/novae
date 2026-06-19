@@ -125,3 +125,13 @@ adata.obs[["cell_type", "novae_domains"]].to_parquet("local_annotations.parquet"
 ```
 
 And add it to the `annotations` sub-directory.
+
+## Pushing a new model
+
+If you have rights to add a new model, you can do it via:
+
+```python
+model = novae.Novae._load_wandb_artifact("novae/novae/<wandb-artefact-name>")
+
+model.save_pretrained("local-path", push_to_hub=True, repo_id="prism-oncology/novae-test2")
+```

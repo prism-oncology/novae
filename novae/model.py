@@ -335,6 +335,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         *,
         repo_id: str | None = None,
         push_to_hub: bool = False,
+        config: dict | None = None,
         **kwargs: int,
     ):
         """Save a pretrained `Novae` model to a directory.
@@ -349,7 +350,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         super().save_pretrained(
             save_directory,
-            config=dict(self.hparams),
+            config=config or dict(self.hparams),
             repo_id=repo_id,
             push_to_hub=push_to_hub,
             **kwargs,
