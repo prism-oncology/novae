@@ -11,7 +11,7 @@ from lightning.pytorch.callbacks import Callback
 from .._constants import Keys
 from ..model import Novae
 from .eval import heuristic, mean_fide_score
-from .log import log_plt_figure, save_pdf_figure
+from .log import log_plt_figure, save_pdf_figure, wandb_log_dir
 from .spectral import spectral_stats
 
 log = logging.getLogger(__name__)
@@ -61,8 +61,9 @@ class ValidationCallback(Callback):
             return
 
         ### Copy to avoid updating the current model with the zero-shot
-        model.save_pretrained(".tmp_model_checkpoint")
-        model_copy = Novae.from_pretrained(".tmp_model_checkpoint")
+        tmp_path = wandb_log_dir() / ".tmp_model_checkpoint"
+        model.save_pretrained(tmp_path)
+        model_copy = Novae.from_pretrained(tmp_path)
         model_copy.mode.trained = True  # trick to avoid assert error in compute_representations
 
         model_copy.compute_representations(
@@ -108,7 +109,9 @@ class ValidationCallback(Callback):
 
         ### Spectral statistics
         try:
-            participation_ratio, effective_rank, eigvals = spectral_stats(self.adata.obsm[Keys.REPR])
+            z = self.adata.obsm[Keys.REPR]
+            z = z[self.adata.obs[Keys.IS_VALID_OBS]]  # non-zero representations
+            participation_ratio, effective_rank, eigvals = spectral_stats(z)
 
             model.log("metrics/val_participation_ratio", participation_ratio)
             model.log("metrics/val_effective_rank", effective_rank)
