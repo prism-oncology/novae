@@ -1,3 +1,5 @@
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scanpy as sc
@@ -9,7 +11,10 @@ from lightning.pytorch.callbacks import Callback
 from .._constants import Keys
 from ..model import Novae
 from .eval import heuristic, mean_fide_score
-from .log import log_plt_figure, save_pdf_figure
+from .log import log_plt_figure, save_pdf_figure, wandb_log_dir
+from .spectral import spectral_stats
+
+log = logging.getLogger(__name__)
 
 
 class LogProtoCovCallback(Callback):
@@ -39,7 +44,7 @@ class ValidationCallback(Callback):
         num_workers: int = 0,
         slide_name_key: str = "slide_id",
         k: int = 7,
-        res: float = 0.5,
+        res: float = 0.8,
     ):
         assert adatas is None or len(adatas) == 1, "ValidationCallback only supports single slide mode for now"
         self.adata = adatas[0] if adatas is not None else None
@@ -55,20 +60,28 @@ class ValidationCallback(Callback):
         if self.adata is None:
             return
 
-        model.mode.trained = True  # trick to avoid assert error in compute_representations
+        ### Copy to avoid updating the current model with the zero-shot
+        tmp_path = wandb_log_dir() / ".tmp_model_checkpoint"
+        model.save_pretrained(tmp_path)
+        model_copy = Novae.from_pretrained(tmp_path)
+        model_copy.mode.trained = True  # trick to avoid assert error in compute_representations
 
-        model.compute_representations(
+        model_copy.compute_representations(
             self.adata, accelerator=self.accelerator, num_workers=self.num_workers, zero_shot=True
         )
-        model.swav_head.hierarchical_clustering()
 
-        obs_key = model.assign_domains(self.adata, n_domains=self.k)
+        ### Hierachical clustering ###
 
+        model_copy.swav_head.hierarchical_clustering()
+        obs_key = model_copy.assign_domains(self.adata, n_domains=self.k)
+
+        # Spatial plot
         plt.figure()
         sc.pl.spatial(self.adata, color=obs_key, spot_size=20, img_key=None, show=False)
         slide_name_key = self.slide_name_key if self.slide_name_key in self.adata.obs else Keys.SLIDE_ID
         log_plt_figure(f"val_{self.k}_{self.adata.obs[slide_name_key].iloc[0]}")
 
+        ### Metrics
         fide = mean_fide_score(self.adata, obs_key=obs_key, n_classes=self.k)
         model.log("metrics/val_mean_fide_score", fide)
 
@@ -78,12 +91,15 @@ class ValidationCallback(Callback):
         self._max_heuristic = max(self._max_heuristic, heuristic_)
         model.log("metrics/val_max_heuristic", self._max_heuristic)
 
-        obs_key = model.assign_domains(self.adata, resolution=self.res)
+        ### Leiden clustering ###
+        obs_key = model_copy.assign_domains(self.adata, resolution=self.res)
 
+        # Spatial plot
         plt.figure()
         sc.pl.spatial(self.adata, color=obs_key, spot_size=20, img_key=None, show=False)
         log_plt_figure(f"val_res{self.res}_{self.adata.obs[slide_name_key].iloc[0]}")
 
+        # Metrics
         fide = mean_fide_score(self.adata, obs_key=obs_key)
         model.log(f"metrics/val_mean_fide_score_res{self.res}", fide)
 
@@ -91,7 +107,21 @@ class ValidationCallback(Callback):
         heuristic_ = heuristic(self.adata, obs_key=obs_key, n_classes=n_classes)
         model.log(f"metrics/val_heuristic_res{self.res}", heuristic_)
 
-        model.mode.zero_shot = False
+        ### Spectral statistics
+        try:
+            z = self.adata.obsm[Keys.REPR]
+            z = z[self.adata.obs[Keys.IS_VALID_OBS]]  # non-zero representations
+            participation_ratio, effective_rank, eigvals = spectral_stats(z)
+
+            model.log("metrics/val_participation_ratio", participation_ratio)
+            model.log("metrics/val_effective_rank", effective_rank)
+
+            plt.bar(range(len(eigvals)), eigvals)
+            plt.xlabel("Eigenvalue index")
+            plt.ylabel("Eigenvalue magnitude")
+            log_plt_figure("eigvals")
+        except Exception as e:
+            log.info(f"Error computing spectral statistics: {e}")
 
 
 class PrototypeUMAPCallback(Callback):

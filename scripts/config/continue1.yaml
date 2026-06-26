@@ -1,0 +1,14 @@
+# denim-sunset-1534
+wandb_artefact: "novae/novae/model-0wux5me4:v12"
+
+data:
+  train_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2
+  val_dataset: /gpfs/workdir/blampeyq/res_novae/X_scConcept2_validation2
+
+fit_kwargs:
+  max_epochs: 40
+  lr: 0.00003
+  accelerator: "gpu"
+  num_workers: 8
+  patience: 6
+  min_delta: 0.025

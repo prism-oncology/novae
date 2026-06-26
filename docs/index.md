@@ -11,6 +11,12 @@ Novae is a deep learning model for spatial domain assignments of spatial transcr
 !!! info
     Novae was developed by the authors of [`sopa`](https://github.com/prism-oncology/sopa) and is part of the [`scverse`](https://scverse.org/) ecosystem.
 
+!!! tip
+    **Recent updates:**
+
+    1. We added a new improved model, check [the corresponding tutorial here](../tutorials/novae_scConcept).
+    2. We added a tutorial for [automated labeling](../tutorials/labeling/).
+
 ## Overview
 
 <p align="center">

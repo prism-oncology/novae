@@ -20,7 +20,7 @@ from novae.monitor.callback import (
     PrototypeUMAPCallback,
     ValidationCallback,
 )
-from novae.monitor.log import log_plt_figure, wandb_results_dir
+from novae.monitor.log import log_plt_figure, repository_root, wandb_log_dir, wandb_results_dir
 
 from .config import Config
 
@@ -49,7 +49,7 @@ def init_wandb_logger(config: Config) -> WandbLogger:
     assert "slide_key" not in config.model_kwargs, "For now, please provide one adata per file."
 
     wandb_logger = WandbLogger(
-        save_dir=novae.utils.wandb_log_dir(),
+        save_dir=wandb_log_dir(),
         log_model="all",
         project=config.project,
     )
@@ -78,7 +78,7 @@ def get_callbacks(config: Config, adatas_val: list[AnnData] | None) -> list[L.Ca
 
     return [
         *validation_callback,
-        ModelCheckpoint(monitor="metrics/val_heuristic", mode="max", save_last=True, save_top_k=1),
+        ModelCheckpoint(monitor="metrics/val_mean_fide_score", mode="max", save_last=True, save_top_k=5),
         LogProtoCovCallback(),
         LogTissuePrototypeWeights(),
         PrototypeUMAPCallback(),
@@ -86,7 +86,7 @@ def get_callbacks(config: Config, adatas_val: list[AnnData] | None) -> list[L.Ca
 
 
 def read_config(args: argparse.Namespace) -> Config:
-    with open(novae.utils.repository_root() / "scripts" / "config" / args.config) as f:
+    with open(repository_root() / "scripts" / "config" / args.config) as f:
         config = yaml.safe_load(f)
         config = Config(**config, sweep=args.sweep)
 
@@ -165,10 +165,6 @@ def _log_umap(model: novae.Novae, adatas: list[AnnData], config: Config, n_obs_t
         latent_conc = np.concatenate([adata.obsm[Keys.REPR_CORRECTED] for adata in adatas], axis=0)
         obs_conc = pd.concat([adata.obs for adata in adatas], axis=0, join="inner")
         adata_conc = AnnData(obsm={Keys.REPR_CORRECTED: latent_conc}, obs=obs_conc)
-
-        if "cell_id" in adata_conc.obs:
-            del adata_conc.obs["cell_id"]  # can't be saved for some reasons
-        _save_h5ad(adata_conc, "adata_conc")
 
         if adata_conc.n_obs > n_obs_th:
             sc.pp.subsample(adata_conc, n_obs=n_obs_th)

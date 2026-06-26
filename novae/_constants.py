@@ -27,6 +27,7 @@ class Keys:
 
     # uns keys
     NOVAE_UNS: str = "novae_attrs"
+    OBSM_KEY: str = "obsm_key"
 
     # misc keys
     UNS_TISSUE: str = "novae_tissue"

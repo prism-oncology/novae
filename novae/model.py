@@ -44,6 +44,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         self,
         adata: AnnData | list[AnnData] | None = None,
         embedding_size: int = 100,
+        embedding_name: str | None = None,
         min_prototypes_ratio: float = 0.3,
         n_hops_local: int = 2,
         n_hops_view: int = 2,
@@ -65,11 +66,12 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         mode_kwargs: dict | None = None,
     ) -> None:
         """
-        Initialize a Novae model.
+        Initialize a new Novae model.
 
         Args:
             adata: An `AnnData` object, or a list of `AnnData` objects. Optional if the model was initialized with `adata`.
             embedding_size: Size of the embeddings of the genes (`E` in the article). Do not use it when loading embeddings from scGPT.
+            embedding_name: Optional name of the single-cell embedding in `.obsm` to use as a cell embedding. If not provided, use the Novae cell embedder projection.
             min_prototypes_ratio: Minimum ratio of prototypes to be used for each slide. Use a low value to get highly slide-specific or condition-specific prototypes.
             n_hops_local: Number of hops between a cell and its neighborhood cells.
             n_hops_view: Number of hops between a cell and the origin of a second graph (or 'view').
@@ -81,7 +83,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             batch_size: Mini-batch size.
             num_prototypes: Number of prototypes (`K` in the article).
             panel_subset_size: Ratio of genes kept from the panel during augmentation.
-            background_noise_lambda: Parameter of the exponential distribution for the noise augmentation.
+            background_noise_lambda: Parameter of the exponential distribution for the noise augmentation. If `embedding_name` is used, use a normal distribution with std = lambda instead.
             sensitivity_noise_std: Standard deviation for the multiplicative for for the noise augmentation.
             dropout_rate: Dropout rate for the genes during augmentation.
             histo_embedding_size: Size of the H&E embeddings. Only used in multimodal mode.
@@ -92,7 +94,10 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         super().__init__()
 
         ### Initialize cell embedder and prepare adata(s) object(s)
-        if scgpt_model_dir is None:
+        if embedding_name is not None:
+            self.adatas, var_names = utils.prepare_adatas(adata, embedding_name=embedding_name)
+            self.cell_embedder = None
+        elif scgpt_model_dir is None:
             self.adatas, var_names = utils.prepare_adatas(adata, var_names=var_names)
             self.cell_embedder = CellEmbedder(var_names, embedding_size)
             self.cell_embedder.pca_init(self.adatas, pca_init_reference_index)
@@ -109,7 +114,11 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         ### Initialize modules
         self.encoder = GraphEncoder(embedding_size, hidden_size, num_layers, output_size, heads, histo_embedding_size)
         self.augmentation = GraphAugmentation(
-            panel_subset_size, background_noise_lambda, sensitivity_noise_std, dropout_rate
+            panel_subset_size,
+            background_noise_lambda,
+            sensitivity_noise_std,
+            dropout_rate,
+            use_repr=embedding_name is not None,
         )
         self.swav_head = SwavHead(self.mode, output_size, num_prototypes, temperature)
 
@@ -143,7 +152,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         self,
         adata: AnnData | list[AnnData] | None = None,
         reference: Literal["all", "largest"] | str | int | list[str] | list[int] = "all",
-    ):
+    ) -> None:
         datamodule = self._init_datamodule(
             self._prepare_adatas(utils.get_reference(adata, reference)), sample_cells=Nums.DEFAULT_SAMPLE_CELLS
         )
@@ -152,7 +161,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
     def __repr__(self) -> str:
         info_dict: dict[str, int | str | bool | None] = {
-            "Known genes": self.cell_embedder.voc_size,
+            "Known genes": self.cell_embedder.voc_size if self.cell_embedder is not None else None,
+            "Embedding name": self.hparams.embedding_name,
             "Parameters": utils.pretty_num_parameters(self),
             "Model name": self._model_name,
             "Trained": self.mode.trained,
@@ -185,7 +195,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         if self._datamodule is not None:
             self._datamodule.num_workers = value
 
-    def _update_multimodal_mode(self):
+    def _update_multimodal_mode(self) -> None:
         if settings.disable_multimodal:
             self.mode.multimodal = False
             self.hparams["mode_kwargs"]["multimodal"] = False
@@ -215,17 +225,18 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         else:
             raise ValueError(f"Invalid type for `adata`: {type(adata)}")
 
-    def _prepare_adatas(self, adata: AnnData | list[AnnData] | None):
+    def _prepare_adatas(self, adata: AnnData | list[AnnData] | None) -> list[AnnData]:
         if adata is None:
             return self.adatas
-        return utils.prepare_adatas(adata, var_names=self.cell_embedder.gene_names)[0]
+        var_names = self.cell_embedder.gene_names if self.cell_embedder is not None else None
+        return utils.prepare_adatas(adata, var_names=var_names, embedding_name=self.hparams.embedding_name)[0]
 
     def _init_datamodule(
         self, adata: AnnData | list[AnnData] | None = None, sample_cells: int | None = None, **kwargs: int
-    ):
+    ) -> NovaeDatamodule:
         return NovaeDatamodule(
             self._to_anndata_list(adata),
-            cell_embedder=self.cell_embedder,
+            cell_embedder=self.cell_embedder or self.hparams.embedding_name,
             batch_size=self.hparams.batch_size,
             n_hops_local=self.hparams.n_hops_local,
             n_hops_view=self.hparams.n_hops_view,
@@ -234,7 +245,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             **kwargs,
         )
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> optim.Optimizer:
         lr = self._lr if hasattr(self, "_lr") else 1e-3
         return optim.Adam(self.parameters(), lr=lr)
 
@@ -257,12 +268,12 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
     def _embed_pyg_data(self, data: Batch) -> Batch:
         if self.training:
             data = self.augmentation(data)
-        return self.cell_embedder(data)
+        return data if self.cell_embedder is None else self.cell_embedder(data)
 
     def forward(self, batch: dict[str, Batch]) -> dict[str, Tensor]:
         return {key: self.encoder(self._embed_pyg_data(data)) for key, data in batch.items()}
 
-    def training_step(self, batch: dict[str, Batch], batch_idx: int):
+    def training_step(self, batch: dict[str, Batch], batch_idx: int) -> Tensor:
         z_dict: dict[str, Tensor] = self(batch)
         slide_id = batch["main"].get("slide_id", [None])[0]
 
@@ -273,7 +284,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         return loss
 
-    def on_train_epoch_start(self):
+    def on_train_epoch_start(self) -> None:
         self.training = True
 
         self.datamodule.dataset.shuffle_obs_ilocs()
@@ -281,7 +292,9 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         after_warm_up = self.current_epoch >= Nums.WARMUP_EPOCHS
         self.swav_head._prototypes.requires_grad_(after_warm_up or self.mode.pretrained)
 
-    def _log_progress_bar(self, name: str, value: float, on_epoch: bool = True, prog_bar: bool = True, **kwargs):
+    def _log_progress_bar(
+        self, name: str, value: float, on_epoch: bool = True, prog_bar: bool = True, **kwargs
+    ) -> None:
         self.log(
             f"train/{name}",
             value,
@@ -310,9 +323,11 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         model = super().from_pretrained(model_name_or_path, **kwargs)
 
-        model.mode.from_pretrained()
+        model.mode.as_pretrained()
         model._model_name = model_name_or_path
-        model.cell_embedder.embedding.weight.requires_grad_(False)
+
+        if model.cell_embedder is not None:
+            model.cell_embedder.embedding.weight.requires_grad_(False)
 
         return model
 
@@ -322,8 +337,9 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         *,
         repo_id: str | None = None,
         push_to_hub: bool = False,
+        config: dict | None = None,
         **kwargs: int,
-    ):
+    ) -> None:
         """Save a pretrained `Novae` model to a directory.
 
         !!! info
@@ -336,13 +352,13 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         super().save_pretrained(
             save_directory,
-            config=dict(self.hparams),
+            config=config or dict(self.hparams),
             repo_id=repo_id,
             push_to_hub=push_to_hub,
             **kwargs,
         )
 
-    def on_save_checkpoint(self, checkpoint):
+    def on_save_checkpoint(self, checkpoint) -> None:
         checkpoint[Keys.NOVAE_VERSION] = __version__
 
     @classmethod
@@ -355,7 +371,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             ckpt_version = torch.load(artifact_path, map_location=map_location).get(Keys.NOVAE_VERSION, "unknown")
             raise ValueError(f"The model was trained with `novae=={ckpt_version}`, but your version is {__version__}")
 
-        model.mode.from_pretrained()
+        model.mode.as_pretrained()
         model._model_name = model_name
         return model
 
@@ -385,7 +401,6 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         assert (not zero_shot) or (reference is not None), "`reference=None` is not supported in zero-shot mode."
         assert adata is not None or self.adatas is not None, "No AnnData object found."
 
-        self.mode.zero_shot = zero_shot
         self.training = False
         self._parse_hardware_args(accelerator, num_workers, use_device=True)
 
@@ -398,15 +413,16 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
                 datamodule = self._init_datamodule(adata)
                 self._compute_representations_datamodule(adata, datamodule)
 
-        if self.mode.zero_shot:
+        if zero_shot:
             self.assign_to_kmeans_prototypes(adatas, reference)
-
-        utils.store_inference_mode(adatas, zero_shot=zero_shot)
 
     def assign_to_kmeans_prototypes(
         self, adatas: AnnData | list[AnnData], reference: str | int | Literal["all", "largest"]
-    ):
+    ) -> None:
         """Compute prototypes based on the latent representations, and assign each cell to a leaf."""
+        log.info(f"Updating the prototypes using {reference=} and assigning each cell to a leaf.")
+        self.mode.as_zero_shot()
+
         adatas = [adatas] if isinstance(adatas, AnnData) else adatas
 
         adatas_refs = utils.get_reference(adatas, reference)
@@ -417,6 +433,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         for adata in adatas:
             self._compute_leaves(adata, None, None)
+
+        utils.store_inference_mode(adatas, zero_shot=True)
 
     @torch.no_grad()
     def _compute_representations_datamodule(
@@ -451,7 +469,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             projections = np.concatenate(projections)
             self._compute_leaves(adata, projections, valid_indices)
 
-    def _compute_leaves(self, adata: AnnData, projections: np.ndarray | None, valid_indices: np.ndarray | None):
+    def _compute_leaves(self, adata: AnnData, projections: np.ndarray | None, valid_indices: np.ndarray | None) -> None:
         assert (projections is None) is (valid_indices is None)
 
         if projections is None:
@@ -469,7 +487,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         hline_level: int | list[int] | None = None,
         leaf_font_size: int = 8,
         **kwargs,
-    ):
+    ) -> None:
         """Plot the domains hierarchy as a dendogram.
 
         Args:
@@ -485,7 +503,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             **kwargs,
         )
 
-    def plot_prototype_weights(self, assign_zeros: bool = True, **kwargs: int):
+    def plot_prototype_weights(self, assign_zeros: bool = True, **kwargs: int) -> None:
         """Plot the weights of the prototypes per slide."""
 
         assert self.swav_head.queue is not None, (
@@ -509,7 +527,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         plot._weights_clustermap(weights, self.adatas, list(self.swav_head.slide_label_encoder.keys()), **kwargs)
 
-    def plot_prototype_covariance(self, vmax: float | None = None, **kwargs):
+    def plot_prototype_covariance(self, vmax: float | None = None, **kwargs) -> None:
         covariance = np.cov(self.swav_head._prototypes.data.numpy(force=True))
 
         vmax = vmax or covariance.max()
@@ -584,7 +602,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
         return key_added
 
-    def batch_effect_correction(self, adata: AnnData | list[AnnData] | None = None, obs_key: str | None = None):
+    def batch_effect_correction(self, adata: AnnData | list[AnnData] | None = None, obs_key: str | None = None) -> None:
         """Correct batch effects from the spatial representations of cells.
 
         !!! info
@@ -611,7 +629,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         min_delta: float = 0.1,
         min_prototypes_ratio: float = 0.3,
         **fit_kwargs: int,
-    ):
+    ) -> None:
         """Fine tune a pretrained Novae model. This will update the prototypes with the new data, and `fit` for one or a few epochs.
 
         Args:
@@ -625,7 +643,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             min_prototypes_ratio: Minimum ratio of prototypes to be used for each slide. Use a low value to get highly slide-specific or condition-specific prototypes.
             **fit_kwargs: Optional kwargs for the [novae.Novae.fit][] method.
         """
-        self.mode.fine_tune()
+        self.mode.as_fine_tuned()
         self._parse_hardware_args(accelerator, num_workers, use_device=True)
 
         assert adata is not None, "Please provide an AnnData object to fine-tune the model."
@@ -659,7 +677,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         callbacks: list[Callback] | None = None,
         logger: Logger | list[Logger] | bool = False,
         **trainer_kwargs: int,
-    ):
+    ) -> None:
         """Train a Novae model. The training will be stopped by early stopping.
 
         !!! warn
@@ -677,10 +695,10 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             logger: The pytorch lightning logger.
             **trainer_kwargs: Optional kwargs for the Pytorch Lightning `Trainer` class.
         """
-        self.mode.fit()
+        self.mode.as_fitted()
 
         if adata is not None:
-            self.adatas, _ = utils.prepare_adatas(adata, var_names=self.cell_embedder.gene_names)
+            self.adatas = self._prepare_adatas(adata)
 
         ### Misc
         self._update_multimodal_mode()

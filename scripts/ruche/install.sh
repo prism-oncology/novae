@@ -1,16 +1,19 @@
 #!/bin/bash
 #SBATCH --job-name=novae
 #SBATCH --output=/gpfs/workdir/blampeyq/.jobs_outputs/%j
-#SBATCH --time=24:00:00
+#SBATCH --time=4:00:00
 #SBATCH --partition=gpu
-#SBATCH --mem=300G
-#SBATCH --cpus-per-task=8
+#SBATCH --mem=10G
+#SBATCH --tmp=20G
+#SBATCH --cpus-per-task=1
 #SBATCH --gres=gpu:1
 
 module purge
+
 module load anaconda3/2023.09-0/none-none
 module load gcc/15.1.0/gcc-15.1.0
-module load cmake/3.31.9/gcc-15.1.0
+
+module load cmake/3.21.4/gcc-13.2.0
 module load openblas/0.3.30/intel-oneapi-compilers-2025.3.1-openmp
 module load cuda/12.2.2/none-none
 
@@ -18,13 +21,4 @@ source activate novae
 
 cd /gpfs/workdir/blampeyq/novae
 
-# Get config
-SWEEP_ID=${1}
-AGENT_COUNT=${2:-1}
-echo "Running $AGENT_COUNT sequential agent(s) for SWEEP_ID=$SWEEP_ID"
-
-WANDB__SERVICE_WAIT=300
-export WANDB__SERVICE_WAIT
-
-# Run one agent
-wandb agent $SWEEP_ID --count $AGENT_COUNT
+pip install -e .

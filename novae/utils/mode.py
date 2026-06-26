@@ -18,15 +18,19 @@ class Mode:
 
     ### Mode modifiers
 
-    def from_pretrained(self):
+    def as_pretrained(self):
         self.zero_shot = False
         self.trained = True
         self.pretrained = True
 
-    def fine_tune(self):
+    def as_zero_shot(self):
+        self.zero_shot = True
+        self.trained = True
+
+    def as_fine_tuned(self):
         assert self.pretrained, "Fine-tuning requires a pretrained model."
         self.zero_shot = False
 
-    def fit(self):
+    def as_fitted(self):
         self.zero_shot = False
         self.trained = False

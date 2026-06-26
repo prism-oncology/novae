@@ -1,6 +1,5 @@
 import importlib
 import logging
-from pathlib import Path
 from typing import Literal
 
 import lightning as L
@@ -41,7 +40,7 @@ def lower_var_names(var_names: pd.Index | list[str]) -> pd.Index | list[str]:
 def fill_invalid_indices(
     out: np.ndarray,
     n_obs: int,
-    valid_indices: list[int],
+    valid_indices: np.ndarray,
     fill_value: float | str = np.nan,
     dtype: object = None,
 ) -> np.ndarray:
@@ -74,24 +73,6 @@ def parse_device_args(accelerator: str = "cpu") -> torch.device:
     return torch.device(f"{_accelerator}:{device_idx}")
 
 
-def repository_root() -> Path:
-    """Get the path to the root of the repository (dev-mode users only)
-
-    Returns:
-        `novae` repository path
-    """
-    path = Path(__file__).parents[2]
-
-    if path.name != "novae":
-        log.warning(f"Trying to get the novae repository path, but it seems it was not installed in dev mode: {path}")
-
-    return path
-
-
-def wandb_log_dir() -> Path:
-    return repository_root() / "wandb"
-
-
 def tqdm(*args, desc="DataLoader", **kwargs):
     # check if ipywidgets is installed before importing tqdm.auto
     # to ensure it won't fail and a progress bar is displayed
@@ -112,9 +93,17 @@ def pretty_num_parameters(model: torch.nn.Module) -> str:
     return f"{n_params / 1_000_000:.1f}M"
 
 
-def pretty_model_repr(info_dict: dict[str, int | str | bool | None], model_name: str = "Novae") -> str:
-    rows = [f"{model_name} model"] + [f"{k}: {v}" for k, v in info_dict.items()]
-    return "\n   ├── ".join(rows[:-1]) + "\n   └── " + rows[-1]
+def pretty_model_repr(info_dict: dict[str, int | str | bool | None]) -> str:
+    lines = [f"{k}: {v}" for k, v in info_dict.items() if v is not None]
+    width = max(len(line) for line in lines)
+
+    rows = [
+        f"╭─{' Novae '.ljust(width, '─')}─╮",
+        *[f"│ {line.ljust(width)} │" for line in lines],
+        f"╰{'─' * (width + 2)}╯",
+    ]
+
+    return "\n".join(rows)
 
 
 def iter_slides(adatas: AnnData | list[AnnData]):

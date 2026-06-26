@@ -1,27 +1,31 @@
 method: random
 metric:
   goal: maximize
-  name: metrics/val_heuristic
+  name: metrics/val_mean_fide_score_res0.8
 parameters:
   output_size:
     values: [64, 128]
   num_layers:
-    values: [10, 14, 18]
+    values: [10, 14]
   hidden_size:
-    values: [64, 128]
+    values: [128, 256, 512]
+  num_prototypes:
+    values: [512, 1024]
   background_noise_lambda:
-    min: 3
-    max: 5
+    min: 0.0002
+    max: 0.002
   sensitivity_noise_std:
-    min: 0.08
-    max: 0.16
+    min: 0.0001
+    max: 0.001
   lr:
-    values: [0.00005, 0.0001, 0.0002, 0.0004]
+    values: [0.00001, 0.00003]
+  temperature:
+    values: [0.08, 0.1, 0.12]
 
 command:
   - python
   - -m
   - scripts.train
   - --config
-  - all_ruche.yaml
+  - concept_sweep.yaml
   - --sweep

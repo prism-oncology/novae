@@ -195,9 +195,7 @@ class SwavHead(L.LightningModule):
         kmeans_prototypes = kmeans.fit(X.astype(np.float64)).cluster_centers_
         kmeans_prototypes = kmeans_prototypes / (Nums.EPS + np.linalg.norm(kmeans_prototypes, axis=1)[:, None])
 
-        self._prototypes = torch.nn.Parameter(
-            torch.tensor(kmeans_prototypes, dtype=self._prototypes.dtype, device=self._prototypes.device)
-        )
+        self._prototypes = torch.nn.Parameter(torch.tensor(kmeans_prototypes, dtype=self._prototypes.dtype))
 
         self.reset_clustering()
 
@@ -236,7 +234,7 @@ class SwavHead(L.LightningModule):
         self._clusters_levels[0] = np.arange(len(X))
 
         for i, (a, b) in enumerate(self._clustering.children_):
-            clusters = self._clusters_levels[i]
+            clusters: np.ndarray = self._clusters_levels[i]
             self._clusters_levels[i + 1] = clusters
             self._clusters_levels[i + 1, np.where((clusters == a) | (clusters == b))] = len(X) + i
 

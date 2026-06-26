@@ -1,40 +1,13 @@
 import logging
 from typing import Callable, cast
 
-import anndata
 import pandas as pd
 import scanpy as sc
 from anndata import AnnData
 
 from ..._constants import Keys
-from ...utils import repository_root
 
 log = logging.getLogger(__name__)
-
-
-def _read_h5ad_from_hub(name: str, row: pd.Series, annotations: bool = False) -> AnnData:
-    from huggingface_hub import hf_hub_download
-
-    file_path = f"{row['species']}/{row['tissue']}/{name}.h5ad"
-    local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=file_path, repo_type="dataset")
-
-    adata = sc.read_h5ad(local_file)
-
-    if "slide_id" in adata.obs:
-        adata.obs.rename(columns={"slide_id": Keys.SLIDE_ID}, inplace=True)
-    else:
-        adata.obs[Keys.SLIDE_ID] = pd.Series(name, index=adata.obs_names, dtype="category")
-
-    if annotations:
-        try:
-            df_annot = pd.read_parquet(f"hf://datasets/prism-oncology/novae/annotations/{name}.parquet")
-            adata.obs[df_annot.columns] = df_annot
-        except FileNotFoundError:
-            log.warning(f"Annotations unavailable for {name}. They will not be added to the adata.obs.")
-        except Exception as e:
-            log.warning(f"Failed to read annotations for {name}: {e}.")
-
-    return adata
 
 
 def load_dataset(
@@ -45,6 +18,7 @@ def load_dataset(
     custom_filter: Callable[[pd.DataFrame], pd.Series] | None = None,
     top_k: int | None = None,
     annotations: bool = False,
+    embeddings: str | None = None,
     dry_run: bool = False,
 ) -> list[AnnData] | pd.DataFrame:
     """Automatically load slides from the Novae dataset repository.
@@ -61,6 +35,7 @@ def load_dataset(
         custom_filter: Custom filter function that takes the metadata DataFrame (see above link) and returns a boolean Series to decide which rows should be kept.
         top_k: Optional number of slides to keep. If `None`, keeps all slides.
         annotations: If `True`, this will add cell-type annotations and/or pre-computed novae spatial domains in `adata.obs`. Not all slides have these annotations available.
+        embeddings: Optional embedding type to load, e.g., `"corpus360M[multi-species]-model170M"` for scConcept embeddings.
         dry_run: If `True`, the function will only return the metadata of slides that match the filters.
 
     Returns:
@@ -101,31 +76,54 @@ def load_dataset(
         return cast(pd.DataFrame, metadata)
 
     log.info(f"Found {len(metadata)} h5ad file(s) matching the filters.")
-    return [_read_h5ad_from_hub(name, row, annotations=annotations) for name, row in metadata.iterrows()]
+    return [
+        _read_anndata_from_hub(row["species"], row["tissue"], name, annotations=annotations, embeddings=embeddings)
+        for name, row in metadata.iterrows()
+    ]
 
 
-def load_local_dataset(relative_path: str, files_black_list: list[str] | None = None) -> list[AnnData]:
-    """Load one or multiple AnnData objects based on a relative path from the data directory
+def _read_anndata_from_hub(
+    species: str,
+    tissue: str,
+    name: str,
+    annotations: bool = False,
+    embeddings: str | None = None,
+) -> AnnData:
+    from huggingface_hub.errors import EntryNotFoundError
 
-    Args:
-        relative_path: Relative from from the data directory. If a directory, loads every .h5ad files inside it. Can also be a file, or a file pattern.
+    adata = _read_h5ad_from_hub(f"{species}/{tissue}/{name}.h5ad")
 
-    Returns:
-        A list of AnnData objects
-    """
-    data_dir = repository_root() / "data"
-    full_path = data_dir / relative_path
+    if "slide_id" in adata.obs:  # old datasets used "slide_id" instead of "novae_sid"
+        adata.obs.rename(columns={"slide_id": Keys.SLIDE_ID}, inplace=True)
+    elif Keys.SLIDE_ID not in adata.obs:
+        adata.obs[Keys.SLIDE_ID] = pd.Series(name, index=adata.obs_names, dtype="category")
+    adata.obs["name"] = pd.Series(name, index=adata.obs_names, dtype="category")
 
-    files_black_list = files_black_list or []
+    if annotations:
+        try:
+            df_annot = pd.read_parquet(f"hf://datasets/prism-oncology/novae/annotations/{name}.parquet")
+            adata.obs[df_annot.columns] = df_annot
+        except FileNotFoundError:
+            log.warning(f"Annotations unavailable for {name}. They will not be added to the adata.obs.")
+        except Exception as e:
+            log.warning(f"Failed to read annotations for {name}: {e}.")
 
-    if full_path.is_file():
-        assert full_path.name not in files_black_list, f"File {full_path} is in the black list"
-        log.info(f"Loading one adata: {full_path}")
-        return [anndata.read_h5ad(full_path)]
+    if embeddings is not None:
+        try:
+            adata_embeddings = _read_h5ad_from_hub(f"embeddings/{embeddings}/{name}.h5ad")
+            obsm_key = adata_embeddings.uns[Keys.OBSM_KEY]
+            adata.obsm[obsm_key] = adata_embeddings.obsm[obsm_key]
+        except EntryNotFoundError:
+            log.warning(f"Embeddings '{embeddings}' unavailable for {name}. They will not be added to the adata.obsm.")
+        except Exception as e:
+            log.warning(f"Failed to read embeddings '{embeddings}' for {name}: {e}.")
 
-    all_paths = list(data_dir.rglob(relative_path) if ".h5ad" in relative_path else full_path.rglob("*.h5ad"))
+    return adata
 
-    all_paths = [path for path in all_paths if path.name not in files_black_list]
 
-    log.info(f"Loading {len(all_paths)} adata(s): {', '.join([str(path) for path in all_paths])}")
-    return [anndata.read_h5ad(path) for path in all_paths]
+def _read_h5ad_from_hub(path: str) -> AnnData:
+    from huggingface_hub import hf_hub_download
+
+    local_file = hf_hub_download(repo_id="prism-oncology/novae", filename=path, repo_type="dataset")
+
+    return sc.read_h5ad(local_file)

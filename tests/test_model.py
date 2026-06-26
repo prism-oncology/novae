@@ -11,7 +11,7 @@ from anndata import AnnData
 
 import novae
 from novae._constants import Keys
-from novae.data._load._toy import GENE_NAMES_SUBSET
+from novae.data._load.toy import GENE_NAMES_SUBSET
 
 adatas = novae.data.toy_dataset(
     n_panels=2,
@@ -216,6 +216,7 @@ def test_saved_model_identical(slide_key: str | None, scgpt_model_dir: str | Non
         scgpt_model_dir=scgpt_model_dir,
     )
 
+    assert model.cell_embedder is not None
     assert model.cell_embedder.embedding.weight.requires_grad is (scgpt_model_dir is None)
 
     model._datamodule = model._init_datamodule()
@@ -299,6 +300,21 @@ def test_reset_clusters_zero_shot():
     model.compute_representations(adata, zero_shot=True)
 
     assert not (model.swav_head.clusters_levels == clusters_levels).all()
+
+
+def test_kmeans_prototype_updates_leaves():
+    adatas = novae.toy_dataset(compute_spatial_neighbors=True)
+
+    model = novae.Novae(adatas, num_prototypes=50)
+    model.mode.trained = True
+
+    model.compute_representations(adatas)
+    novae_leaves = adatas[0].obs[Keys.LEAVES].copy()
+
+    model.assign_to_kmeans_prototypes(adatas, reference="largest")
+    novae_leaves2 = adatas[0].obs[Keys.LEAVES].copy()
+
+    assert not novae_leaves.equals(novae_leaves2)
 
 
 def test_var_name_subset():

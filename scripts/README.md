@@ -4,7 +4,7 @@ These scripts are used to pretrain and monitor Novae with Weight & Biases. To se
 
 ## Setup
 
-For monitoring, `novae` must be installed in editable mode (i.e., via cloning the repository) and with the `dev` extra, for instance via pip:
+For monitoring, `novae` must be installed in editable mode (i.e., via cloning the repository) and with the `dev` dependencies, for instance via pip:
 
 ```sh
 pip install -e '.[dev]'
@@ -48,7 +48,7 @@ In the `slurm` directory:
 
 E.g., on ruche:
 ```sh
-module load anaconda3/2024.06/gcc-13.2.0 && source activate novae
+module load anaconda3/2023.09-0/none-none && source activate novae
 wandb sweep --project novae sweep/gpu_ruche.yaml
 
 cd ruche

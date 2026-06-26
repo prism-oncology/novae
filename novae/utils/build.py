@@ -36,7 +36,7 @@ def spatial_neighbors(
     adata: AnnData | list[AnnData],
     *,
     slide_key: str | None = None,
-    radius: tuple[float, float] | float | None = None,
+    radius: tuple[float, float] | list[int | float] | float | None = None,
     technology: str | SpatialTechnology | None = None,
     coord_type: str | CoordType | None = None,
     n_neighs: int | None = None,
@@ -57,7 +57,7 @@ def spatial_neighbors(
     Args:
         adata: An `AnnData` object, or a list of `AnnData` objects.
         slide_key: Optional key in `adata.obs` indicating the slide ID of each cell. If provided, the graph is computed for each slide separately.
-        radius: `tuple` that prunes the final graph to only contain edges in interval `[min(radius), max(radius)]`. If `float`, uses `[0, radius]`. If `None`, all edges are kept.
+        radius: `tuple` that prunes the final graph to only contain edges in interval `[min(radius), max(radius)]`. If `float | int`, uses `[0, radius]`. If `None`, all edges are kept.
         technology: Technology or machine used to generate the spatial data. One of `"cosmx", "merscope", "xenium", "visium", "visium_hd"`. If `None`, uses `adata.obsm["spatial"]`.
         coord_type: Either `"grid"` or `"generic"`. If `"grid"`, the graph is built on a grid. If `"generic"`, the graph is built using the coordinates as they are. By default, uses `"grid"` for Visium/VisiumHD and `"generic"` for other technologies.
         n_neighs: Number of neighbors to consider. If `None`, uses `6` for Visium, `4` for Visium HD, and `None` for generic graphs.
@@ -164,8 +164,8 @@ def _spatial_neighbor(
     adata: AnnData,
     spatial_key: str = "spatial",
     coord_type: str | CoordType | None = None,
-    n_neighs: int = 6,
-    radius: float | tuple[float, float] | None = None,
+    n_neighs: int | None = 6,
+    radius: float | tuple[float, float] | list[float | int] | None = None,
     delaunay: bool = False,
     n_rings: int = 1,
     set_diag: bool = False,
@@ -206,7 +206,7 @@ def _spatial_neighbor(
 
 
 def _build_grid(
-    coords: np.ndarray, n_neighs: int, n_rings: int, delaunay: bool = False, set_diag: bool = False
+    coords: np.ndarray, n_neighs: int | None, n_rings: int, delaunay: bool = False, set_diag: bool = False
 ) -> tuple[csr_matrix, csr_matrix]:
     if n_rings > 1:
         Adj: csr_matrix = _build_connectivity(
@@ -242,7 +242,7 @@ def _build_grid(
 
 def _build_connectivity(
     coords: np.ndarray,
-    n_neighs: int,
+    n_neighs: int | None,
     radius: float | tuple[float, float] | None = None,
     delaunay: bool = False,
     neigh_correct: bool = False,

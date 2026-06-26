@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 from pathlib import Path
@@ -65,7 +67,7 @@ class CellEmbedder(L.LightningModule):
         self.linear.bias.data.zero_()
 
     @classmethod
-    def from_scgpt_embedding(cls, scgpt_model_dir: str) -> "CellEmbedder":
+    def from_scgpt_embedding(cls, scgpt_model_dir: Path | str) -> CellEmbedder:
         """Initialize the CellEmbedder from a scGPT pretrained model directory.
 
         Args:
@@ -74,7 +76,7 @@ class CellEmbedder(L.LightningModule):
         Returns:
             A CellEmbedder instance.
         """
-        scgpt_model_dir = Path(scgpt_model_dir)
+        scgpt_model_dir: Path = Path(scgpt_model_dir)
 
         vocab_file = scgpt_model_dir / "vocab.json"
 

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from ...utils import wandb_log_dir
+from ...monitor.log import wandb_log_dir
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def _load_wandb_artifact(name: str) -> Path:
 
     artifact = api.artifact(name)
 
-    artifact_path = wandb_log_dir() / "artifacts" / artifact.name
+    artifact_path: Path = wandb_log_dir() / "artifacts" / artifact.name
 
     if artifact_path.exists():
         log.info(f"Artifact {artifact_path} already downloaded")

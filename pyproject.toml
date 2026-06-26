@@ -1,6 +1,6 @@
 [project]
 name = "novae"
-version = "1.0.7"
+version = "1.1.0"
 description = "Graph-based foundation model for spatial transcriptomics data"
 authors = [{ name = "Quentin Blampey", email = "quentin.blampey@gmail.com" }]
 requires-python = ">=3.11"
@@ -23,7 +23,7 @@ dependencies = [
   "huggingface-hub>=0.32.0",
   "safetensors>=0.4.3",
   "igraph>=0.11.8",
-  "fast-array-utils>=1.3.1",
+  "fast-array-utils>=1.3.1,<1.4.0", # pinned until https://github.com/scverse/fast-array-utils/issues/179 is solved
 ]
 
 [project.optional-dependencies]
