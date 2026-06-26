@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import wandb
 from PIL import Image
 
 log = logging.getLogger(__name__)
@@ -31,12 +30,16 @@ def wandb_log_dir() -> Path:
 
 
 def wandb_results_dir() -> Path:
+    import wandb
+
     RES_DIR: Path = wandb_log_dir() / "results" / wandb.run.name
     RES_DIR.mkdir(parents=True, exist_ok=True)
     return RES_DIR
 
 
 def log_plt_figure(name: str, dpi: int = 300) -> None:
+    import wandb
+
     img_buf = io.BytesIO()
     plt.savefig(img_buf, format="png", bbox_inches="tight", dpi=dpi)
     wandb.log({name: wandb.Image(Image.open(img_buf))})
