@@ -2,13 +2,10 @@ import importlib
 import logging
 from typing import Literal
 
-import lightning as L
 import numpy as np
 import pandas as pd
 import torch
 from anndata import AnnData
-from lightning.pytorch.callbacks import Callback, EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers.logger import Logger
 from lightning.pytorch.trainer.connectors.accelerator_connector import _AcceleratorConnector
 
 from .._constants import Keys
@@ -127,39 +124,6 @@ def iter_slides(adatas: AnnData | list[AnnData]):
 
         for slide_id in slide_ids:
             yield adata[adata.obs[Keys.SLIDE_ID] == slide_id]
-
-
-def train(
-    model: L.LightningModule,
-    datamodule: L.LightningDataModule,
-    accelerator: str,
-    max_epochs: int = 50,
-    patience: int = 3,
-    min_delta: float = 0,
-    callbacks: list[Callback] | None = None,
-    logger: Logger | list[Logger] | bool = False,
-    **trainer_kwargs: int,
-):
-    """Internal function to train a LightningModule with early stopping."""
-
-    early_stopping = EarlyStopping(
-        monitor="train/loss_epoch",
-        min_delta=min_delta,
-        patience=patience,
-        check_on_train_epoch_end=True,
-    )
-    callbacks = [early_stopping] + (callbacks or [])
-    enable_checkpointing = any(isinstance(c, ModelCheckpoint) for c in callbacks)
-
-    trainer = L.Trainer(
-        max_epochs=max_epochs,
-        accelerator=accelerator,
-        callbacks=callbacks,
-        logger=logger,
-        enable_checkpointing=enable_checkpointing,
-        **trainer_kwargs,
-    )
-    trainer.fit(model, datamodule=datamodule)
 
 
 def get_reference(

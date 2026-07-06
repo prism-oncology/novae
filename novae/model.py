@@ -11,7 +11,8 @@ from anndata import AnnData
 from huggingface_hub import PyTorchModelHubMixin
 from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers.logger import Logger
-from torch import Tensor, optim
+from lightning.pytorch.utilities.types import OptimizerLRScheduler
+from torch import Tensor
 from torch_geometric.data import Batch
 
 from . import __version__, plot, settings, utils
@@ -245,9 +246,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             **kwargs,
         )
 
-    def configure_optimizers(self) -> optim.Optimizer:
-        lr = self._lr if hasattr(self, "_lr") else 1e-3
-        return optim.Adam(self.parameters(), lr=lr)
+    def configure_optimizers(self) -> OptimizerLRScheduler:
+        return utils.configure_optimizers(self.parameters(), self._lr, self._use_scheduler, self._max_epochs)
 
     def _parse_hardware_args(self, accelerator: str, num_workers: int | None, use_device: bool = False) -> None:
         if accelerator == "cpu" and num_workers:
@@ -628,6 +628,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         lr: float = 5e-4,
         min_delta: float = 0.1,
         min_prototypes_ratio: float = 0.3,
+        use_scheduler: bool = False,
         **fit_kwargs: int,
     ) -> None:
         """Fine tune a pretrained Novae model. This will update the prototypes with the new data, and `fit` for one or a few epochs.
@@ -662,6 +663,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             num_workers=num_workers,
             lr=lr,
             min_delta=min_delta,
+            use_scheduler=use_scheduler,
             **fit_kwargs,
         )
 
@@ -675,6 +677,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         min_delta: float = 0.1,
         patience: int = 3,
         callbacks: list[Callback] | None = None,
+        use_scheduler: bool = False,
         logger: Logger | list[Logger] | bool = False,
         **trainer_kwargs: int,
     ) -> None:
@@ -703,6 +706,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         ### Misc
         self._update_multimodal_mode()
         self._lr = lr
+        self._use_scheduler = use_scheduler
+        self._max_epochs = max_epochs
         self.swav_head.reset_clustering()  # ensure we don't re-use old clusters
         self._parse_hardware_args(accelerator, num_workers)
         self._datamodule = self._init_datamodule()
