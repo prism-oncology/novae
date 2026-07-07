@@ -626,9 +626,9 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         accelerator: str = "cpu",
         num_workers: int | None = None,
         lr: float = 5e-4,
-        min_delta: float = 0.1,
+        min_delta: float = 0.05,
         min_prototypes_ratio: float = 0.3,
-        use_scheduler: bool = False,
+        use_scheduler: bool = True,
         **fit_kwargs: int,
     ) -> None:
         """Fine tune a pretrained Novae model. This will update the prototypes with the new data, and `fit` for one or a few epochs.
@@ -642,6 +642,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             lr: Model learning rate.
             min_delta: Minimum change in the monitored quantity to qualify as an improvement (early stopping).
             min_prototypes_ratio: Minimum ratio of prototypes to be used for each slide. Use a low value to get highly slide-specific or condition-specific prototypes.
+            use_scheduler: Whether to use a learning rate scheduler (`LinearLR` followed by `CosineAnnealingLR`).
             **fit_kwargs: Optional kwargs for the [novae.Novae.fit][] method.
         """
         self.mode.as_fine_tuned()
@@ -675,10 +676,10 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         num_workers: int | None = None,
         lr: float = 1e-3,
         min_delta: float = 0.1,
-        patience: int = 3,
+        patience: int = 4,
         callbacks: list[Callback] | None = None,
-        use_scheduler: bool = False,
         logger: Logger | list[Logger] | bool = False,
+        use_scheduler: bool = True,
         **trainer_kwargs: int,
     ) -> None:
         """Train a Novae model. The training will be stopped by early stopping.
@@ -696,6 +697,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             patience: Number of epochs with no improvement after which training will be stopped (early stopping).
             callbacks: Optional list of Pytorch lightning callbacks.
             logger: The pytorch lightning logger.
+            use_scheduler: Whether to use a learning rate scheduler (`LinearLR` followed by `CosineAnnealingLR`).
             **trainer_kwargs: Optional kwargs for the Pytorch Lightning `Trainer` class.
         """
         self.mode.as_fitted()
