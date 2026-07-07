@@ -2,14 +2,24 @@
 
 Here, we list some advice to help you get the best out of Novae.
 
+### Fine-tuning
+The following recommendations can help improve [fine-tuning](../../api/Novae/#novae.Novae.fine_tune) performance:
+
+1. Starting with `novae==1.1.1`, Novae uses a learning-rate scheduler by default, which generally improves fine-tuning stability. We therefore recommend using `novae>=1.1.1`. If needed, you can disable the scheduler by setting `use_scheduler=False`.
+2. Use the `min_prototypes_ratio` parameter to control the fraction of prototypes shared across slides. Higher values enforce more prototype sharing and therefore stronger batch-effect correction. The optimal value depends on your data and biological question. For example, highly heterogeneous tissues may benefit from lower values than more homogeneous datasets.
+3. We recommend [monitoring model training](../../faq/#how-to-monitor-the-model-training). If the training loss has not plateaued by the end of training, consider increasing `max_epochs` and decreasing `min_delta`.
+4. See also the recommendations on [high-quality subset training](./#high-quality-training-subset) below.
+
 ### High-quality training subset
-When you have many slides, it's recommended to train or fine-tune Novae only on the good quality slides and run inference (i.e., spatial domain assignment) on all slides. This allows noise removal in the model training while still applying Novae to the low quality slides.
+When working with many slides, we recommend fine-tuning Novae **only on the highest-quality slides**, and then running inference (i.e., spatial domain assignment) on the full dataset. This reduces the impact of noisy or low-quality slides during training while still allowing all slides to be annotated.
+
+However, ensure that the selected slides are representative of the biological diversity in your dataset. For example, if you have quality-control metrics for 50 or more slides, selecting the top 5–10 highest-quality slides is often a good starting point.
 
 ### Resolution or level
-When running [`assign_domains`](../api/Novae/#novae.Novae.assign_domains) in **zero-shot**, it's generally better to use the `resolution` argument. When fine-tuning or re-training a Novae model, both `level` and `resolution` are recommended (depending whether you need hierarchies of domains).
+When running [`assign_domains`](../api/Novae/#novae.Novae.assign_domains) in **zero-shot**, it's generally better to use the `resolution` argument. When fine-tuning or re-training a Novae model, both `level` and `resolution` can be used (depending whether you need hierarchies of domains).
 
 !!! info
-    An advantage of using `level` is that the domains will be nested through the different levels — we don't have such a property using the `resolution` argument.
+    An advantage of using `level` is that the domains will be nested through the different levels — we don't have such a property using the `resolution` argument. But, if you don't need hierarchies, `level` may be a good choice.
 
 ### Coordinate system
 After computing the Delaunay graph, Novae uses the distances between cells for training and during inference. This can be useful as it helps to better separate spatial domains with different densities of cells.

@@ -21,11 +21,11 @@ Choose one of the following installation mode, depending on your needs.
     pip install novae
     ```
 
-    If you want to use Novae in multimodal mode, you can also install the two following extras: `multimodal` and `conch`.
-    You can install both as follows:
+    If you want to use Novae in multimodal mode, you can also install the following extras: `multimodal`, `conch`, and `llm`.
+    You can install them as follows:
 
     ```bash
-    pip install 'novae[multimodal,conch]'
+    pip install 'novae[multimodal,conch,llm]'
     ```
 
 === "uv (editable mode)"
@@ -56,7 +56,7 @@ Choose one of the following installation mode, depending on your needs.
     cd novae
 
     pip install -e . # no extra
-    pip install -e '.[multimodal,conch]' # all extras
+    pip install -e '.[multimodal,conch,llm]' # all extras
     ```
 
 ## Next steps
