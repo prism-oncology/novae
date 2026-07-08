@@ -1,4 +1,4 @@
-## LaTeX citation
+## Citation
 
 Our article is published in [Nature Methods](https://www.nature.com/articles/s41592-025-02899-6). You can cite Novae as below:
 

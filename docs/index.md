@@ -14,8 +14,8 @@ Novae is a deep learning model for spatial domain assignments of spatial transcr
 !!! tip
     **Recent updates:**
 
-    1. We added a new improved model, check [the corresponding tutorial here](../tutorials/novae_scConcept).
-    2. We added a tutorial for [automated labeling](../tutorials/labeling/).
+    1. We added a new improved model, check [the corresponding tutorial here](./tutorials/novae_scConcept).
+    2. We added a tutorial for [automated labeling](./tutorials/labeling/).
 
 ## Overview
 
