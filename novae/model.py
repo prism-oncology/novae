@@ -627,6 +627,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         num_workers: int | None = None,
         lr: float = 5e-4,
         min_delta: float = 0.05,
+        patience: int = 4,
         min_prototypes_ratio: float = 0.3,
         use_scheduler: bool = True,
         **fit_kwargs: int,
@@ -641,6 +642,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             num_workers: Number of workers for the dataloader.
             lr: Model learning rate.
             min_delta: Minimum change in the monitored quantity to qualify as an improvement (early stopping).
+            patience: Number of epochs with no improvement after which training will be stopped (early stopping).
             min_prototypes_ratio: Minimum ratio of prototypes to be used for each slide. Use a low value to get highly slide-specific or condition-specific prototypes.
             use_scheduler: Whether to use a learning rate scheduler (`LinearLR` followed by `CosineAnnealingLR`).
             **fit_kwargs: Optional kwargs for the [novae.Novae.fit][] method.
@@ -664,6 +666,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             num_workers=num_workers,
             lr=lr,
             min_delta=min_delta,
+            patience=patience,
             use_scheduler=use_scheduler,
             **fit_kwargs,
         )
