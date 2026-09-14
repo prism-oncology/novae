@@ -155,7 +155,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         reference: Literal["all", "largest"] | str | int | list[str] | list[int] = "all",
     ) -> None:
         datamodule = self._init_datamodule(
-            self._prepare_adatas(utils.get_reference(adata, reference)), sample_cells=Nums.DEFAULT_SAMPLE_CELLS
+            self._prepare_adatas(utils.get_reference(adata, reference)),
+            sampling_size=Nums.INIT_PROTO_CELL_SAMPLING_SIZE,
         )
         latent = self._compute_representations_datamodule(None, datamodule, return_representations=True)
         self.swav_head.update_kmeans_prototypes(latent)
@@ -233,7 +234,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         return utils.prepare_adatas(adata, var_names=var_names, embedding_name=self.hparams.embedding_name)[0]
 
     def _init_datamodule(
-        self, adata: AnnData | list[AnnData] | None = None, sample_cells: int | None = None, **kwargs: int
+        self, adata: AnnData | list[AnnData] | None = None, sampling_size: int | None = None, **kwargs: int
     ) -> NovaeDatamodule:
         return NovaeDatamodule(
             self._to_anndata_list(adata),
@@ -242,7 +243,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             n_hops_local=self.hparams.n_hops_local,
             n_hops_view=self.hparams.n_hops_view,
             num_workers=self._num_workers,
-            sample_cells=sample_cells,
+            sampling_size=sampling_size,
             **kwargs,
         )
 
@@ -428,7 +429,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         adatas_refs = utils.get_reference(adatas, reference)
         adatas_refs = [adatas_refs] if isinstance(adatas_refs, AnnData) else adatas_refs
 
-        latent = np.concatenate([adata.obsm[Keys.REPR][utils.valid_indices(adata)] for adata in adatas_refs])
+        latent = utils.sample_latent(adatas_refs, sampling_size=Nums.ZERO_SHOT_CELL_SAMPLING_SIZE)
         self.swav_head.update_kmeans_prototypes(latent)
 
         for adata in adatas:

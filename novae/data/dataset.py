@@ -40,7 +40,7 @@ class NovaeDataset(Dataset):
         batch_size: int,
         n_hops_local: int,
         n_hops_view: int,
-        sample_cells: int | None = None,
+        sampling_size: int | None = None,
     ) -> None:
         """NovaeDataset constructor.
 
@@ -50,7 +50,7 @@ class NovaeDataset(Dataset):
             batch_size: The model batch size.
             n_hops_local: Number of hops between a cell and its neighborhood cells.
             n_hops_view: Number of hops between a cell and the origin of a second graph (or 'view').
-            sample_cells: If not None, the dataset if used to sample the subgraphs from precisely `sample_cells` cells.
+            sampling_size: If not None, the dataset if used to sample the subgraphs from precisely `sampling_size` cells.
         """
         super().__init__()
         self.adatas = adatas
@@ -62,7 +62,7 @@ class NovaeDataset(Dataset):
         self.batch_size = batch_size
         self.n_hops_local = n_hops_local
         self.n_hops_view = n_hops_view
-        self.sample_cells = sample_cells
+        self.sampling_size = sampling_size
 
         self.single_adata = len(self.adatas) == 1
         self.single_slide_mode = self.single_adata and len(np.unique(self.adatas[0].obs[Keys.SLIDE_ID])) == 1
@@ -115,8 +115,8 @@ class NovaeDataset(Dataset):
         self.shuffle_obs_ilocs()
 
     def __len__(self) -> int:
-        if self.sample_cells is not None:
-            return min(self.sample_cells, len(self.shuffled_obs_ilocs))
+        if self.sampling_size is not None:
+            return min(self.sampling_size, len(self.shuffled_obs_ilocs))
 
         if self.training:
             n_obs = len(self.shuffled_obs_ilocs)
@@ -135,7 +135,7 @@ class NovaeDataset(Dataset):
         Returns:
             A dictionnary whose keys are names, and values are PyTorch Geometric `Data` objects. The `"view"` graph is only provided during training.
         """
-        if self.training or self.sample_cells is not None:
+        if self.training or self.sampling_size is not None:
             adata_index, obs_index = self.shuffled_obs_ilocs[index]
         else:
             adata_index, obs_index = self.obs_ilocs[index]
