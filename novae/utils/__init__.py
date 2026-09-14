@@ -11,6 +11,7 @@ from ._utils import (
     unique_obs,
     valid_indices,
     store_inference_mode,
+    sample_latent,
 )
 from ._train import configure_optimizers, train
 from ._validate import (

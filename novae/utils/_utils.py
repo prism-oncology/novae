@@ -181,3 +181,22 @@ def store_inference_mode(adatas: AnnData | list[AnnData], zero_shot: bool):
     for adata in adatas:
         adata.uns[Keys.NOVAE_UNS] = adata.uns.get(Keys.NOVAE_UNS, {})
         adata.uns[Keys.NOVAE_UNS]["zero_shot"] = zero_shot
+
+
+def sample_latent(adatas: list[AnnData], sampling_size: int) -> np.ndarray:
+    np.random.seed(0)
+
+    indices_list = [valid_indices(adata) for adata in adatas]
+    n_valid_cells = sum(len(indices) for indices in indices_list)
+
+    if n_valid_cells <= sampling_size:
+        return np.concatenate([
+            adata.obsm[Keys.REPR][indices] for indices, adata in zip(indices_list, adatas, strict=True)
+        ])
+
+    subsampling_ratio = sampling_size / n_valid_cells
+
+    return np.concatenate([
+        adata.obsm[Keys.REPR][np.random.choice(indices, size=int(len(indices) * subsampling_ratio), replace=False)]
+        for indices, adata in zip(indices_list, adatas, strict=True)
+    ])
