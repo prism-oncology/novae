@@ -17,7 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+      - name: Set up the environment
+        uses: ./.github/actions/setup-python-env
       - name: Run checks
         run: uv run --locked poe pre-commit
 
