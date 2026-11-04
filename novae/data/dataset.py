@@ -25,12 +25,12 @@ class NovaeDataset(Dataset):
 
     Attributes:
         valid_indices (list[np.ndarray]): List containing, for each `adata`, an array that denotes the indices of the cells whose neighborhood is valid.
-        obs_ilocs (np.ndarray): An array of shape `(total_valid_indices, 2)`. The first column corresponds to the adata index, and the second column is the cell index for the corresponding adata.
+        obs_ilocs (np.ndarray): An array of shape `(total_valid_indices, 2)`. The first column corresponds to the adata index, and the second column is the cell index for the corresponding adata. Only in single-slide mode.
         shuffled_obs_ilocs (np.ndarray): same as obs_ilocs, but shuffled. Each batch will contain cells from the same slide.
     """
 
     valid_indices: list[np.ndarray]
-    obs_ilocs: np.ndarray
+    obs_ilocs: np.ndarray | None
     shuffled_obs_ilocs: np.ndarray
 
     def __init__(
@@ -76,7 +76,7 @@ class NovaeDataset(Dataset):
 
     def _init_dataset(self):
         for adata in self.adatas:
-            adjacency: csr_matrix = adata.obsp[Keys.ADJ]
+            adjacency: csr_matrix = adata.obsp[Keys.ADJ]  # ty: ignore[invalid-assignment]
 
             if Keys.NOVAE_UNS not in adata.uns:
                 adata.uns[Keys.NOVAE_UNS] = {}
@@ -122,7 +122,7 @@ class NovaeDataset(Dataset):
             n_obs = len(self.shuffled_obs_ilocs)
             return min(n_obs, max(Nums.MIN_DATASET_LENGTH, int(n_obs * Nums.MAX_DATASET_LENGTH_RATIO)))
 
-        assert self.single_adata, "Multi-adata mode not supported for inference"
+        assert self.single_adata and self.obs_ilocs is not None, "Multi-adata mode not supported for inference"
 
         return len(self.obs_ilocs)
 
@@ -138,6 +138,7 @@ class NovaeDataset(Dataset):
         if self.training or self.sampling_size is not None:
             adata_index, obs_index = self.shuffled_obs_ilocs[index]
         else:
+            assert self.obs_ilocs is not None
             adata_index, obs_index = self.obs_ilocs[index]
 
         data = self.to_pyg_data(adata_index, obs_index)
@@ -161,10 +162,10 @@ class NovaeDataset(Dataset):
             A Data object
         """
         adata = self.adatas[adata_index]
-        adjacency_local: csr_matrix = adata.obsp[Keys.ADJ_LOCAL]
+        adjacency_local: csr_matrix = adata.obsp[Keys.ADJ_LOCAL]  # ty: ignore[invalid-assignment]
         obs_indices = adjacency_local[obs_index].indices
 
-        adjacency: csr_matrix = adata.obsp[Keys.ADJ]
+        adjacency: csr_matrix = adata.obsp[Keys.ADJ]  # ty: ignore[invalid-assignment]
         edge_index, edge_weight = from_scipy_sparse_matrix(adjacency[obs_indices][:, obs_indices])
         edge_attr = (
             edge_weight[:, None].to(torch.float32) * settings.scale_to_microns / Nums.CELLS_CHARACTERISTIC_DISTANCE
@@ -189,6 +190,7 @@ class NovaeDataset(Dataset):
     def shuffle_obs_ilocs(self):
         """Shuffle the indices of the cells to be used in the dataset (for training only)."""
         if self.single_slide_mode:
+            assert self.obs_ilocs is not None
             self.shuffled_obs_ilocs = self.obs_ilocs[np.random.permutation(len(self.obs_ilocs))]
             return
 
@@ -218,7 +220,7 @@ class NovaeDataset(Dataset):
 
         self.shuffled_obs_ilocs = np.stack([adata_indices, obs_indices], axis=1)
 
-    def _adata_slides_metadata(self, adata_index: int, obs_indices: list[int]) -> pd.DataFrame:
+    def _adata_slides_metadata(self, adata_index: int, obs_indices: list[int] | np.ndarray) -> pd.DataFrame:
         obs_counts: pd.Series = self.adatas[adata_index].obs.iloc[obs_indices][Keys.SLIDE_ID].value_counts()
         slides_metadata = obs_counts.to_frame()
         slides_metadata[Keys.ADATA_INDEX] = adata_index
@@ -261,6 +263,6 @@ def _to_adjacency_view(adjacency: csr_matrix, n_hops_view: int) -> csr_matrix:
         adjacency_pair = adjacency_pair @ adjacency
     adjacency_pair = adjacency_pair.tolil()
     adjacency_pair[adjacency_previous.nonzero()] = 0
-    adjacency_pair: csr_matrix = adjacency_pair.tocsr()  # type: ignore[no-redef]
+    adjacency_pair: csr_matrix = adjacency_pair.tocsr()
     adjacency_pair.eliminate_zeros()
     return adjacency_pair

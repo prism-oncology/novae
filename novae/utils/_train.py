@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from typing import Any
 
 import lightning as L
 from lightning.pytorch.callbacks import Callback, EarlyStopping, ModelCheckpoint
@@ -18,7 +19,7 @@ def train(
     min_delta: float = 0,
     callbacks: list[Callback] | None = None,
     logger: Logger | list[Logger] | bool = False,
-    **trainer_kwargs: int,
+    **trainer_kwargs: Any,
 ):
     """Internal function to train a LightningModule with early stopping."""
 

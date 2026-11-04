@@ -135,7 +135,7 @@ def pathway_scores(
         df = df.groupby(obs_key, observed=True).mean()
         df.columns.name = "Pathways"
 
-    del adata.obs[TEMP_KEY]
+    del adata.obs[TEMP_KEY]  # ty: ignore[not-subscriptable]
 
     df = df.fillna(0)
 
@@ -150,10 +150,8 @@ def pathway_scores(
 
 
 def _get_pathway_score(adata: AnnData, gene_names: list[str], min_pathway_size: int) -> bool:
-    lower_var_names = adata.var_names.str.lower()
-
-    gene_names = np.array([gene_name.lower() for gene_name in gene_names])
-    gene_names = adata.var_names[np.isin(lower_var_names, gene_names)]
+    is_valid = np.isin(adata.var_names.str.lower(), [gene_name.lower() for gene_name in gene_names])
+    gene_names: pd.Index = adata.var_names[is_valid]
 
     if len(gene_names) >= min_pathway_size:
         sc.tl.score_genes(adata, gene_names, score_name=TEMP_KEY)

@@ -62,6 +62,6 @@ class GraphEncoder(L.LightningModule):
         out = self.node_aggregation(out, index=data.batch)
 
         if hasattr(data, "histo_embeddings"):
-            out = self.mlp_fusion(torch.cat([out, data.histo_embeddings], dim=-1))
+            out = self.mlp_fusion(torch.cat([out, data.histo_embeddings], dim=-1))  # ty: ignore[invalid-argument-type]
 
         return out

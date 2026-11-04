@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 from anndata import AnnData
@@ -55,15 +56,18 @@ def compute_histo_embeddings(
     assert 0 <= patch_overlap_ratio < 1, "patch_overlap_ratio must be between 0 and 1"
     patch_overlap = int(patch_overlap_ratio * Nums.HE_PATCH_WIDTH)
 
-    adata: AnnData = sdata[table_key]
+    adata: AnnData = sdata.tables[table_key]
 
     if image_key is None:
         image_key, _ = sopa.utils.get_spatial_element(
-            sdata.images, sdata.attrs.get(SopaAttrs.TISSUE_SEGMENTATION, None), return_key=True
+            sdata.images,  # ty: ignore[invalid-argument-type]
+            sdata.attrs.get(SopaAttrs.TISSUE_SEGMENTATION, None),
+            return_key=True,
         )
 
     # align the cells boundaries to the image coordinate system
     shapes_key, _, instance_key = get_table_keys(adata)
+    assert isinstance(shapes_key, str)
 
     if not sdata.shapes[shapes_key].geometry.is_valid.all():
         log.warning(f"Found invalid geometries in `sdata['{shapes_key}']`. They will be fixed using `.make_valid()`.")
@@ -134,7 +138,7 @@ def compute_histo_pca(
             "Could not find `embedding_key` in adata.obs. Did you run `novae.data.compute_histo_embeddings` first?"
         )
         embedding_key = _table.obs["embedding_key"].iloc[0]
-        return sdata.tables[embedding_key].X
+        return sdata.tables[embedding_key].X  # ty: ignore[invalid-return-type]
 
     X = np.concatenate([_histo_emb(sdata) for sdata in sdatas], axis=0)
 
@@ -144,5 +148,5 @@ def compute_histo_pca(
     pipeline.fit(X)
 
     for sdata in sdatas:
-        adata: AnnData = sdata[table_key]
+        adata = sdata.tables[table_key]
         adata.obsm[Keys.HISTO_EMBEDDINGS] = pipeline.transform(_histo_emb(sdata)[adata.obs["embedding_index"]])

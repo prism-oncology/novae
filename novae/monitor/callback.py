@@ -128,7 +128,7 @@ class PrototypeUMAPCallback(Callback):
     MAX_SLIDES: int = 8
     LEVEL: int = 15
 
-    def on_train_epoch_end(self, trainer: Trainer, model: Novae):
+    def on_train_epoch_end(self, trainer: Trainer, model: Novae) -> None:
         adata_proto = AnnData(model.swav_head._prototypes.data.numpy(force=True))
 
         sc.pp.neighbors(adata_proto)

@@ -1,3 +1,4 @@
+import itertools
 import logging
 
 import pandas as pd
@@ -46,7 +47,7 @@ def _deg_description(adata: AnnData, obs_key: str, domain_ids: list[str], n_gene
     }
 
     extra_degs = []
-    for domain1, domain2 in zip(domain_ids, domain_ids[1:]):
+    for domain1, domain2 in itertools.combinations(domain_ids, 2):
         if len(set(top_degs[domain1]) & set(top_degs[domain2])) >= n_genes / 4:  # similar domains, add extra info
             for group1, group2 in [(domain1, domain2), (domain2, domain1)]:
                 sc.tl.rank_genes_groups(adata, groupby=obs_key, groups=[group1], reference=group2)
@@ -129,7 +130,7 @@ def _pathway_description(
 ) -> str:
     pathway_scores: pd.DataFrame = plot.pathway_scores(
         adata, obs_key=obs_key, pathways=pathways, show=False, return_df=True
-    )
+    )  # ty: ignore[invalid-assignment]
 
     lines = []
     for domain_id in domain_ids:

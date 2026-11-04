@@ -1,20 +1,17 @@
-fail_fast: false
-default_language_version:
-  python: python3
-default_stages:
-- pre-commit
-- pre-push
-minimum_pre_commit_version: 2.16.0
 repos:
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.5
-  hooks:
-  - id: ruff
-  - id: ruff-format
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.5.0
-  hooks:
-  - id: trailing-whitespace
-  - id: end-of-file-fixer
-  - id: check-yaml
-  - id: debug-statements
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.5
+    hooks:
+      - id: ruff
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: debug-statements
+  - repo: https://github.com/astral-sh/ty-pre-commit
+    rev: v0.0.97
+    hooks:
+      - id: ty

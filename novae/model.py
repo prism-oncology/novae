@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import lightning as L
 import numpy as np
@@ -151,7 +151,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
     def init_prototypes(
         self,
-        adata: AnnData | list[AnnData] | None = None,
+        adata: AnnData | list[AnnData],
         reference: Literal["all", "largest"] | str | int | list[str] | list[int] = "all",
     ) -> None:
         datamodule = self._init_datamodule(
@@ -159,7 +159,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             sampling_size=Nums.INIT_PROTO_CELL_SAMPLING_SIZE,
         )
         latent = self._compute_representations_datamodule(None, datamodule, return_representations=True)
-        self.swav_head.update_kmeans_prototypes(latent)
+        self.swav_head.update_kmeans_prototypes(latent)  # ty: ignore[invalid-argument-type]
 
     def __repr__(self) -> str:
         info_dict: dict[str, int | str | bool | None] = {
@@ -229,9 +229,13 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
 
     def _prepare_adatas(self, adata: AnnData | list[AnnData] | None) -> list[AnnData]:
         if adata is None:
+            assert self.adatas is not None
             return self.adatas
+
         var_names = self.cell_embedder.gene_names if self.cell_embedder is not None else None
-        return utils.prepare_adatas(adata, var_names=var_names, embedding_name=self.hparams.embedding_name)[0]
+        return utils.prepare_adatas(adata, var_names=var_names, embedding_name=self.hparams.embedding_name)[
+            0
+        ]  # ty: ignore[invalid-return-type]
 
     def _init_datamodule(
         self, adata: AnnData | list[AnnData] | None = None, sampling_size: int | None = None, **kwargs: int
@@ -294,7 +298,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         self.swav_head._prototypes.requires_grad_(after_warm_up or self.mode.pretrained)
 
     def _log_progress_bar(
-        self, name: str, value: float, on_epoch: bool = True, prog_bar: bool = True, **kwargs
+        self, name: str, value: float | Tensor, on_epoch: bool = True, prog_bar: bool = True, **kwargs
     ) -> None:
         self.log(
             f"train/{name}",
@@ -307,7 +311,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         )
 
     @classmethod
-    def from_pretrained(self, model_name_or_path: str | Path, **kwargs: int) -> Novae:
+    def from_pretrained(self, model_name_or_path: str | Path, **kwargs: Any) -> Novae:
         """Load a pretrained `Novae` model from HuggingFace Hub.
 
         !!! info "Available model names"
@@ -339,7 +343,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         repo_id: str | None = None,
         push_to_hub: bool = False,
         config: dict | None = None,
-        **kwargs: int,
+        **kwargs: Any,
     ) -> None:
         """Save a pretrained `Novae` model to a directory.
 
@@ -363,7 +367,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         checkpoint[Keys.NOVAE_VERSION] = __version__
 
     @classmethod
-    def _load_wandb_artifact(cls, model_name: str, map_location: str = "cpu", **kwargs: int) -> Novae:
+    def _load_wandb_artifact(cls, model_name: str, map_location: str = "cpu", **kwargs: Any) -> Novae:
         artifact_path = _load_wandb_artifact(model_name) / "model.ckpt"
 
         try:
@@ -405,9 +409,10 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         self.training = False
         self._parse_hardware_args(accelerator, num_workers, use_device=True)
 
-        if adata is None and len(self.adatas) == 1:  # using existing datamodule
+        if adata is None and len(self.adatas) == 1:  # ty: ignore[invalid-argument-type]
+            assert self.adatas is not None
             adatas = self.adatas
-            self._compute_representations_datamodule(self.adatas[0], self.datamodule)
+            self._compute_representations_datamodule(self.adatas[0], self.datamodule)  # using existing datamodule
         else:
             adatas = self._prepare_adatas(adata)
             for adata in adatas:
@@ -464,6 +469,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         if return_representations:
             return representations
 
+        assert adata is not None
         adata.obsm[Keys.REPR] = utils.fill_invalid_indices(representations, adata.n_obs, valid_indices, fill_value=0)
 
         if not self.mode.zero_shot:
@@ -479,6 +485,8 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             projections = self.swav_head.projection(representations).numpy(force=True)
 
         leaves_predictions = projections.argmax(axis=1)
+
+        assert valid_indices is not None
         leaves_predictions = utils.fill_invalid_indices(leaves_predictions, adata.n_obs, valid_indices)
         adata.obs[Keys.LEAVES] = [x if np.isnan(x) else f"D{int(x)}" for x in leaves_predictions]
 
@@ -504,7 +512,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
             **kwargs,
         )
 
-    def plot_prototype_weights(self, assign_zeros: bool = True, **kwargs: int) -> None:
+    def plot_prototype_weights(self, assign_zeros: bool = True, **kwargs: Any) -> None:
         """Plot the weights of the prototypes per slide."""
 
         assert self.swav_head.queue is not None, (
@@ -598,7 +606,10 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         key_added = f"{Keys.DOMAINS_PREFIX}{level}" if key_added is None else key_added
 
         for adata in adatas:
-            adata.obs[key_added] = self.swav_head.map_leaves_domains(adata.obs[Keys.LEAVES], level)
+            adata.obs[key_added] = self.swav_head.map_leaves_domains(
+                adata.obs[Keys.LEAVES],  # ty: ignore[invalid-argument-type]
+                level,
+            )
             adata.obs[key_added] = adata.obs[key_added].astype("category")
 
         return key_added
@@ -631,7 +642,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         patience: int = 4,
         min_prototypes_ratio: float = 0.3,
         use_scheduler: bool = True,
-        **fit_kwargs: int,
+        **fit_kwargs: Any,
     ) -> None:
         """Fine tune a pretrained Novae model. This will update the prototypes with the new data, and `fit` for one or a few epochs.
 
@@ -684,7 +695,7 @@ class Novae(L.LightningModule, PyTorchModelHubMixin):
         callbacks: list[Callback] | None = None,
         logger: Logger | list[Logger] | bool = False,
         use_scheduler: bool = True,
-        **trainer_kwargs: int,
+        **trainer_kwargs: Any,
     ) -> None:
         """Train a Novae model. The training will be stopped by early stopping.
 

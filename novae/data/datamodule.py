@@ -41,7 +41,7 @@ class NovaeDatamodule(L.LightningDataModule):
         """
         self.dataset.training = True
         return DataLoader(
-            self.dataset,
+            self.dataset,  # ty: ignore[invalid-argument-type]
             batch_size=self.batch_size,
             shuffle=False,
             drop_last=True,
@@ -56,7 +56,7 @@ class NovaeDatamodule(L.LightningDataModule):
         """
         self.dataset.training = False
         return DataLoader(
-            self.dataset,
+            self.dataset,  # ty: ignore[invalid-argument-type]
             batch_size=self.batch_size,
             shuffle=False,
             drop_last=False,

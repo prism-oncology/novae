@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, cast
+from collections.abc import Callable, Hashable
+from typing import cast
 
 import pandas as pd
 import scanpy as sc
@@ -85,7 +86,7 @@ def load_dataset(
 def _read_anndata_from_hub(
     species: str,
     tissue: str,
-    name: str,
+    name: str | Hashable,
     annotations: bool = False,
     embeddings: str | None = None,
 ) -> AnnData:

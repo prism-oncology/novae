@@ -1,4 +1,3 @@
-import importlib
 import logging
 from typing import Literal
 
@@ -16,7 +15,7 @@ log = logging.getLogger(__name__)
 def unique_obs(adata: AnnData | list[AnnData], obs_key: str) -> set:
     if isinstance(adata, list):
         return set.union(*[unique_obs(adata_, obs_key) for adata_ in adata])
-    return set(adata.obs[obs_key].dropna().unique())
+    return set(adata.obs[obs_key].dropna().unique())  # ty: ignore[missing-argument]
 
 
 def unique_leaves_indices(adata: AnnData | list[AnnData]) -> np.ndarray:
@@ -73,6 +72,8 @@ def parse_device_args(accelerator: str = "cpu") -> torch.device:
 def tqdm(*args, desc="DataLoader", **kwargs):
     # check if ipywidgets is installed before importing tqdm.auto
     # to ensure it won't fail and a progress bar is displayed
+    import importlib.util
+
     if importlib.util.find_spec("ipywidgets") is not None:
         from tqdm.auto import tqdm as _tqdm
     else:
@@ -147,8 +148,8 @@ def get_reference(
         else:
             return max([_select_largest_slide(_adata) for _adata in adatas])[1]
 
-    if isinstance(reference, (str, int)):
-        reference = [reference]
+    if isinstance(reference, str | int):
+        reference: list[str | int] = [reference]
 
     assert all(isinstance(ref, str) for ref in reference) or all(isinstance(ref, int) for ref in reference), (
         "Reference must be either a string (slide ID), an integer (slide index), a list of strings, or a list of integers."

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import torch
 from anndata import AnnData
 from fast_array_utils import stats
@@ -34,12 +35,14 @@ class ZScoreTorch:
             self.tensors = [self.to_tensor(adata) for adata in self.adatas]
 
     def _adata_to_genes_indices(self, adata: AnnData) -> Tensor:
-        return self.cell_embedder.genes_to_indices(adata.var_names[self._keep_var(adata)])[None, :]
+        return self.cell_embedder.genes_to_indices(adata.var_names[self._keep_var(adata)])[
+            None, :
+        ]  # ty: ignore[invalid-return-type]
 
-    def _keep_var(self, adata: AnnData) -> AnnData:
-        return adata.var[Keys.USE_GENE]
+    def _keep_var(self, adata: AnnData) -> pd.Series:
+        return adata.var[Keys.USE_GENE]  # ty: ignore[invalid-return-type]
 
-    def _compute_means_stds(self) -> tuple[Tensor, Tensor, LabelEncoder]:
+    def _compute_means_stds(self) -> tuple[list[Tensor], list[Tensor], LabelEncoder]:
         means, stds = {}, {}
 
         for adata in self.adatas:
