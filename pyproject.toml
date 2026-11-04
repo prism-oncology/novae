@@ -79,10 +79,6 @@ test_no_multimodal = "pytest -m 'not multimodal' --cov --cov-config=pyproject.to
 [tool.ty.src]
 include = ["novae"]
 
-[tool.ty.environment]
-python = "./.venv"
-python-version = "3.12"
-
 [tool.ty.rules]
 unresolved-attribute = "ignore"
 no-matching-overload = "ignore"
