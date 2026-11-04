@@ -44,7 +44,7 @@ Check [Novae's documentation](https://prism-oncology.github.io/novae/) to get st
 
 ## Installation
 
-`novae` can be installed from `PyPI` on all OS, for any Python version `>=3.11`.
+`novae` can be installed from `PyPI` on all OS, for any Python version `>=3.12`.
 
 ```
 pip install novae

@@ -88,7 +88,7 @@ def spatial_neighbors(
             )
         return
 
-    if isinstance(radius, (float, int)):
+    if isinstance(radius, float | int):
         radius = [0.0, float(radius)]
 
     assert radius is None or len(radius) == 2, "Radius is expected to be a tuple (min_radius, max_radius)"
@@ -171,7 +171,7 @@ def _spatial_neighbor(
     set_diag: bool = False,
     percentile: float | None = None,
 ) -> tuple[csr_matrix, csr_matrix]:
-    coords = adata.obsm[spatial_key]
+    coords: np.ndarray = adata.obsm[spatial_key]  # ty: ignore[invalid-assignment]
     assert coords.shape[1] == 2, "Spatial coordinates must be 2D."
 
     with warnings.catch_warnings():
@@ -216,7 +216,7 @@ def _build_grid(
             set_diag=True,
             delaunay=delaunay,
             return_distance=False,
-        )
+        )  # ty: ignore[invalid-assignment]
         Res, Walk = Adj, Adj
         for i in range(n_rings - 1):
             Walk = Walk @ Adj
@@ -243,7 +243,7 @@ def _build_grid(
 def _build_connectivity(
     coords: np.ndarray,
     n_neighs: int | None,
-    radius: float | tuple[float, float] | None = None,
+    radius: float | tuple[float, float] | list[float | int] | None = None,
     delaunay: bool = False,
     neigh_correct: bool = False,
     set_diag: bool = False,
@@ -260,7 +260,8 @@ def _build_connectivity(
             dists = np.linalg.norm(coords[rows] - coords[indices], axis=1)
             Dst = csr_matrix((dists, indices, indptr), shape=(N, N))
     else:
-        r = 1 if radius is None else radius if isinstance(radius, (int, float)) else max(radius)
+        assert n_neighs is not None
+        r = 1 if radius is None else radius if isinstance(radius, int | float) else max(radius)
         tree = NearestNeighbors(n_neighbors=n_neighs, radius=r, metric="euclidean")
         tree.fit(coords)
 
@@ -313,7 +314,7 @@ def _technology_coords(adata: AnnData, technology: str) -> np.ndarray:
 
     assert all(column in adata.obs for column in columns), f"For {technology=}, you must have {columns} in `adata.obs`"
 
-    return adata.obs[columns].values * factor
+    return adata.obs[columns].values * factor  # ty: ignore[unsupported-operator]
 
 
 def _set_unique_slide_ids(adatas: AnnData | list[AnnData], slide_key: str | None) -> None:
@@ -322,7 +323,7 @@ def _set_unique_slide_ids(adatas: AnnData | list[AnnData], slide_key: str | None
     # we will re-create the slide-ids, even if already set
     for adata in adatas:
         if Keys.SLIDE_ID in adata.obs:
-            del adata.obs[Keys.SLIDE_ID]
+            del adata.obs[Keys.SLIDE_ID]  # ty: ignore[not-subscriptable]
 
     if slide_key is None:  # each adata has its own slide ID
         for adata in adatas:
@@ -341,7 +342,7 @@ def _set_unique_slide_ids(adatas: AnnData | list[AnnData], slide_key: str | None
     log.warning("Some slides may have the same `slide_key` values. We add `id(adata)` id to the slide IDs.")
 
     for adata in adatas:
-        values: pd.Series = f"{id(adata)}_" + adata.obs[slide_key].astype(str)
+        values: pd.Series = f"{id(adata)}_" + adata.obs[slide_key].astype(str)  # ty: ignore[invalid-assignment]
         adata.obs[Keys.SLIDE_ID] = values.astype("category")
 
 

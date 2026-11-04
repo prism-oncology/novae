@@ -1,5 +1,6 @@
 import logging
 import math
+from types import EllipsisType
 
 import lightning as L
 import numpy as np
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 class SwavHead(L.LightningModule):
-    queue: None | Tensor  # (n_slides, QUEUE_SIZE, num_prototypes)
+    queue: Tensor | None  # (n_slides, QUEUE_SIZE, num_prototypes)
     _prototypes: nn.Parameter  # (num_prototypes, output_size)
 
     def __init__(
@@ -51,7 +52,9 @@ class SwavHead(L.LightningModule):
 
     def kaiming_prototypes_initialization(self):
         self._prototypes = nn.Parameter(torch.empty((self.num_prototypes, self.output_size)))
-        self._prototypes = nn.init.kaiming_uniform_(self._prototypes, a=math.sqrt(5), mode="fan_out")
+        self._prototypes = nn.init.kaiming_uniform_(  # ty: ignore[invalid-assignment]
+            self._prototypes, a=math.sqrt(5), mode="fan_out"
+        )
 
     def set_min_prototypes(self, min_prototypes_ratio: float):
         self.min_prototypes = int(self.num_prototypes * min_prototypes_ratio)
@@ -115,7 +118,7 @@ class SwavHead(L.LightningModule):
         return z_normalized @ self._prototypes.T
 
     @torch.no_grad()
-    def prototype_ilocs(self, projections: Tensor, slide_id: str | None = None) -> Tensor:
+    def prototype_ilocs(self, projections: Tensor, slide_id: str | None = None) -> Tensor | EllipsisType:
         """Get the indices of the prototypes to use for the current slide.
 
         Args:
@@ -203,13 +206,13 @@ class SwavHead(L.LightningModule):
     def clustering(self) -> AgglomerativeClustering:
         if self._clustering is None:
             self.hierarchical_clustering()
-        return self._clustering
+        return self._clustering  # ty: ignore[invalid-return-type]
 
     @property
     def clusters_levels(self) -> np.ndarray:
         if self._clusters_levels is None:
             self.hierarchical_clustering()
-        return self._clusters_levels
+        return self._clusters_levels  # ty: ignore[invalid-return-type]
 
     def reset_clustering(self) -> None:
         self._clustering = None

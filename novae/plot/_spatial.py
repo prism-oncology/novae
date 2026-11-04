@@ -1,5 +1,6 @@
 import logging
 import warnings
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,7 +36,7 @@ def domains(
     show: bool = True,
     library_id: str | None = None,
     fast: bool = False,
-    **kwargs: int,
+    **kwargs: Any,
 ):
     """Show the Novae spatial domains for all slides in the `AnnData` object.
 
@@ -67,7 +68,7 @@ def domains(
         sanitize_anndata(adata)
 
     all_domains, colors = get_categorical_color_palette(adatas, obs_key, palette=palette)
-    cell_size = cell_size or _get_default_cell_size(adata)
+    cell_size: int | float = cell_size or _get_default_cell_size(adata)
 
     fig, axes = _subplots_per_slide(adatas, ncols, fig_size_per_slide)
 
@@ -166,7 +167,7 @@ def spatially_variable_genes(
     return_list: bool = False,
     show: bool = True,
     **kwargs: int,
-) -> None | list[str]:
+) -> list[str] | None:
     """Plot the most spatially variable genes (SVG) for a given `AnnData` object.
 
     !!! info
@@ -198,7 +199,7 @@ def spatially_variable_genes(
         axis=1,
     )
 
-    positive_ratio = to_dense(stats.mean(adata.X > 0, axis=0), to_cpu_memory=True)
+    positive_ratio = to_dense(stats.mean(adata.X > 0, axis=0), to_cpu_memory=True)  # ty: ignore[unsupported-operator]
     valid_vars = adata.var_names[positive_ratio > min_positive_ratio]
     assert len(valid_vars) >= top_k, (
         f"Only {len(valid_vars)} genes are available. Please decrease `top_k` or `min_positive_ratio`."

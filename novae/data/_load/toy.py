@@ -72,15 +72,16 @@ def toy_dataset(
 
             merge = merge_last_domain_even_slide and (slide_index % 2 == 0)
 
+            coords = spatial + panel_index + slide_index  # ensure the locs are different
             adata = AnnData(
                 np.zeros((n_obs, n_vars)),
-                obsm={"spatial": spatial + panel_index + slide_index},  # ensure the locs are different
+                obsm={"spatial": coords},  # ty: ignore[invalid-argument-type]
                 obs=pd.DataFrame(
                     {"domain": merge_domain if merge else domain}, index=[f"cell_{i}" for i in range(spatial.shape[0])]
                 ),
             )
 
-            adata.var_names = var_names
+            adata.var_names = var_names  # ty: ignore[invalid-assignment]
             adata.obs_names = [f"c_{panel_index}_{slide_index}_{i}" for i in range(adata.n_obs)]
 
             slide_key = f"slide_{panel_index}_{slide_index}" if slide_ids_unique else f"slide_{slide_index}"
@@ -91,8 +92,8 @@ def toy_dataset(
                 n_obs_domain = condition.sum()
 
                 lambdas = domains_shift[i] + slide_shift + panel_shift
-                X_domain = np.random.exponential(lambdas, size=(n_obs_domain, n_vars))
-                adata.X[condition] = X_domain.astype(int)  # values should look like counts
+                X_domain: np.ndarray = np.random.exponential(lambdas, size=(n_obs_domain, n_vars))
+                adata.X[condition] = X_domain.astype(int)  # ty: ignore[invalid-assignment]
 
             if n_drop:
                 size = n_vars - n_drop - panel_index  # different number of genes

@@ -36,7 +36,7 @@ def domains_proportions(
     df = pd.concat(series, axis=1)
     df.columns = names
 
-    df.T.plot(kind="bar", stacked=True, figsize=figsize, color=dict(zip(all_domains, colors)))
+    df.T.plot(kind="bar", stacked=True, figsize=figsize, color=dict(zip(all_domains, colors, strict=False)))
     sns.despine(offset=10, trim=True)
     plt.legend(bbox_to_anchor=(1.04, 0.5), loc="center left", borderaxespad=0, frameon=False)
     plt.ylabel("Proportion")

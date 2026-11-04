@@ -32,7 +32,7 @@ def wandb_log_dir() -> Path:
 def wandb_results_dir() -> Path:
     import wandb
 
-    RES_DIR: Path = wandb_log_dir() / "results" / wandb.run.name
+    RES_DIR: Path = wandb_log_dir() / "results" / str(wandb.run.name)
     RES_DIR.mkdir(parents=True, exist_ok=True)
     return RES_DIR
 

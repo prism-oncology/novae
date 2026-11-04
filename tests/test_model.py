@@ -27,7 +27,7 @@ def _generate_fake_scgpt_inputs():
     gene_names = GENE_NAMES_SUBSET[:100]
     indices = [7, 4, 3, 0, 1, 2, 9, 5, 6, 8, *list(range(10, 100))]
 
-    vocab = dict(zip(gene_names, indices))
+    vocab = dict(zip(gene_names, indices, strict=False))
 
     with open("tests/vocab.json", "w") as f:
         json.dump(vocab, f, indent=4)

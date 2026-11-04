@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from anndata import AnnData
 
 from .._constants import Nums
@@ -12,7 +11,7 @@ def quantile_scaling(
     multiplier: float = 5,
     quantile: float = 0.2,
     per_slide: bool = True,
-) -> pd.DataFrame:
+) -> None:
     """Preprocess fluorescence data from `adata.X` using quantiles of expression.
     For each column `X`, we compute `asinh(X / 5*Q(0.2, X))`, and store them back.
 
@@ -27,7 +26,7 @@ def quantile_scaling(
     if isinstance(adata, list):
         for adata_ in adata:
             quantile_scaling(adata_, multiplier, quantile, per_slide=per_slide)
-        return
+        return None
 
     if not per_slide:
         return _quantile_scaling(adata, multiplier, quantile)
@@ -36,7 +35,7 @@ def quantile_scaling(
         _quantile_scaling(adata_, multiplier, quantile)
 
 
-def _quantile_scaling(adata: AnnData, multiplier: float, quantile: float):
+def _quantile_scaling(adata: AnnData, multiplier: float, quantile: float) -> None:
     df = adata.to_df()
 
     divider = multiplier * np.quantile(df, quantile, axis=0)

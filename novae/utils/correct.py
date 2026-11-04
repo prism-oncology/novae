@@ -43,7 +43,7 @@ def batch_effect_correction(adatas: list[AnnData], obs_key: str) -> None:
 
     domains_counts_per_slide = _domains_counts_per_slide(adatas, obs_key)
     domains = domains_counts_per_slide.columns[:-1]
-    ref_slide_ids: pd.Series = domains_counts_per_slide[domains].idxmax(axis=0)
+    ref_slide_ids: dict[str, str] = domains_counts_per_slide[domains].idxmax(axis=0).to_dict()
 
     def _centroid_reference(domain: str, slide_id: str, obs_key: str):
         adata_ref_index: int = domains_counts_per_slide[Keys.ADATA_INDEX].loc[slide_id]
@@ -58,11 +58,11 @@ def batch_effect_correction(adatas: list[AnnData], obs_key: str) -> None:
     for adata in adatas:
         adata.obsm[Keys.REPR_CORRECTED] = adata.obsm[Keys.REPR].copy()
 
-    for adata_index, obs_indices in zip(adata_indices, slides_obs_indices):
+    for adata_index, obs_indices in zip(adata_indices, slides_obs_indices, strict=False):
         adata = adatas[adata_index]
 
         for domain in domains:
-            if adata.obs[Keys.SLIDE_ID].iloc[obs_indices[0]] == ref_slide_ids.loc[domain]:
+            if adata.obs[Keys.SLIDE_ID].iloc[obs_indices[0]] == ref_slide_ids[domain]:
                 continue  # reference for this domain
 
             indices_domain = obs_indices[adata.obs.iloc[obs_indices][obs_key] == domain]

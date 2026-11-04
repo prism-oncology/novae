@@ -27,7 +27,7 @@ def label_domains(
     max_tokens: int = 1024,
     seed: int | None = None,
     return_prompt: bool = False,
-) -> pd.DataFrame | dict[str, dict[str, Any]]:
+) -> pd.DataFrame | dict[str, dict[str, Any] | list[dict[str, str]]]:
     """While the [`model.assign_domains`](../Novae/#novae.Novae.assign_domains) function provide domain IDs, this function provide biologically meaningful label (or names) to the latter Novae spatial domain IDs.
 
     Internally, it uses an LLM that is prompted with descriptive information: DEGs per domain, domain sizes, optionally pathway expressions, and cell-type proportions.
@@ -57,7 +57,7 @@ def label_domains(
     """
 
     obs_key = utils.check_available_domains_key([adata], obs_key)
-    domain_ids = adata.obs[obs_key].dropna().unique().tolist()
+    domain_ids = adata.obs[obs_key].dropna().unique().tolist()  # ty: ignore[missing-argument]
 
     description = domains_description(
         adata=adata,

@@ -39,8 +39,6 @@ class CellEmbedder(L.LightningModule):
             embedding: Optional pre-trained embedding matrix. If provided, `embedding_size` shouldn't be provided.
         """
         super().__init__()
-        assert (embedding_size is None) ^ (embedding is None), "Either embedding_size or embedding must be provided"
-
         if isinstance(gene_names, dict):
             self.gene_to_index = {gene.lower(): index for gene, index in gene_names.items()}
             self.gene_names = sorted(self.gene_to_index, key=self.gene_to_index.get)
@@ -52,9 +50,11 @@ class CellEmbedder(L.LightningModule):
         self.voc_size = len(self.gene_names)
 
         if embedding is None:
+            assert embedding_size is not None, "Either embedding_size or embedding must be provided"
             self.embedding_size = embedding_size
             self.embedding = nn.Embedding(self.voc_size, embedding_size)
         else:
+            assert embedding_size is None, "Only one of embedding_size or embedding must be provided"
             self.embedding_size = embedding.size(1)
             self.embedding = nn.Embedding.from_pretrained(embedding)
 
@@ -118,7 +118,7 @@ class CellEmbedder(L.LightningModule):
         genes_embeddings = self.linear(genes_embeddings)
         genes_embeddings = F.normalize(genes_embeddings, dim=0, p=2)
 
-        data.x = data.x @ genes_embeddings
+        data.x = data.x @ genes_embeddings  # ty: ignore[unsupported-operator]
         return data
 
     def pca_init(self, adatas: list[AnnData] | None, reference_index: int | None = None) -> None:

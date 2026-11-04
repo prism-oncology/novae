@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-from typing import cast
 
 import anndata
 import numpy as np
@@ -41,10 +40,10 @@ def prepare_adatas(
     assert any(x is not None for x in [adata, var_names, embedding_name]), (
         "One of `adata`/`var_names`/`embedding_name` must not be None"
     )
-    var_names = lower_var_names(var_names) if var_names is not None else None
+    var_names = lower_var_names(var_names) if var_names is not None else None  # ty: ignore[invalid-assignment]
 
     if adata is None:
-        return None, cast(list[str], var_names or [])
+        return None, var_names or []
 
     if isinstance(adata, AnnData):
         adatas = [adata]
@@ -65,7 +64,8 @@ def prepare_adatas(
         )
 
     mean_median_distance = np.mean([
-        np.median(adata.obsp[Keys.ADJ].data * settings.scale_to_microns) for adata in adatas
+        np.median(adata.obsp[Keys.ADJ].data * settings.scale_to_microns)  # ty: ignore[unsupported-operator]
+        for adata in adatas
     ])
     if mean_median_distance > 60:
         log.warning(
@@ -176,7 +176,7 @@ def _lookup_highly_variable_genes(adatas: list[AnnData]) -> None:
 
     _highly_variable_genes(adata_, set_default_true=True)
 
-    highly_variable_genes = adata_.var_names[adata_.var[Keys.HIGHLY_VARIABLE]]
+    highly_variable_genes = adata_.var_names[adata_.var[Keys.HIGHLY_VARIABLE]]  # ty: ignore[invalid-argument-type]
 
     for adata in adatas:
         adata.var[Keys.HIGHLY_VARIABLE] = False
@@ -229,7 +229,10 @@ def _lookup_known_genes(adata: AnnData, var_names: set | list[str] | None) -> No
 
 def _genes_union(adatas: list[AnnData], among_used: bool = False) -> list[str]:
     if among_used:
-        var_names_list = [adata.var_names[adata.var[Keys.USE_GENE]] for adata in adatas]
+        var_names_list = [
+            adata.var_names[adata.var[Keys.USE_GENE]]  # ty: ignore[invalid-argument-type]
+            for adata in adatas
+        ]
     else:
         var_names_list = [adata.var_names for adata in adatas]
 

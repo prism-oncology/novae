@@ -1,3 +1,5 @@
+from typing import Any
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scanpy as sc
@@ -57,7 +59,7 @@ def _domains_hierarchy(
         **kwargs,
     )
 
-    for i, d in zip(ddata["icoord"][::-1], ddata["dcoord"][::-1]):
+    for i, d in zip(ddata["icoord"][::-1], ddata["dcoord"][::-1], strict=False):
         x, y = 0.5 * sum(i[1:3]), d[1]
         plt.plot(x, y, "ko")
         plt.annotate(
@@ -69,16 +71,16 @@ def _domains_hierarchy(
             ha="center",
         )
 
-    plt.yticks(original_ticks, original_ymax - original_ticks)
+    plt.yticks(original_ticks, original_ymax - original_ticks)  # ty: ignore[invalid-argument-type]
 
-    plt.xlabel(None)
+    plt.xlabel("")
     plt.ylabel("Domains level")
     plt.title("Domains hierarchy")
     plt.xlabel("Number of domains in node (or prototype ID if no parenthesis)")
     sns.despine(offset=10, trim=True, bottom=True)
 
 
-def paga(adata: AnnData, obs_key: str | None = None, show: bool = True, **paga_plot_kwargs: int):
+def paga(adata: AnnData, obs_key: str | None = None, show: bool = True, **paga_plot_kwargs: Any):
     """Plot a PAGA graph.
 
     Info:
@@ -164,7 +166,12 @@ def connectivities(
         mask = rows < cols
         rows, cols = rows[mask], cols[mask]
         edge_segments = np.stack([X[rows], X[cols]], axis=1)
-        edges = LineCollection(edge_segments, color=line_color, linewidths=linewidths, zorder=1)
+        edges = LineCollection(
+            edge_segments,  # ty: ignore[invalid-argument-type]
+            color=line_color,
+            linewidths=linewidths,
+            zorder=1,
+        )
         ax.add_collection(edges)
 
         n_neighbors = (A > 0).sum(1).A1
