@@ -1,10 +1,8 @@
 import numpy as np
-import pandas as pd
 import torch
 from anndata import AnnData
 from fast_array_utils import stats
 from fast_array_utils.conv import to_dense
-from sklearn.preprocessing import LabelEncoder
 from torch import Tensor
 
 from .._constants import Keys, Nums
@@ -23,32 +21,27 @@ class ZScoreTorch:
             cell_embedder: A [novae.module.CellEmbedder][] object.
         """
         super().__init__()
-        self.adatas = adatas
+        self.adatas = [adata[:, adata.var[Keys.USE_GENE]] for adata in adatas]
         self.cell_embedder = cell_embedder
 
         self.genes_indices_list = [self._adata_to_genes_indices(adata) for adata in self.adatas]
         self.tensors = None
 
-        self.means, self.stds, self.label_encoder = self._compute_means_stds()
+        self.means_dict, self.stds_dict = self._compute_means_stds()
 
         if not _use_lazy_loading(self.adatas):  # load tensors in memory for low numbers of elements (n_obs * n_vars)
-            self.tensors = [self.to_tensor(adata) for adata in self.adatas]
+            self.tensors = [self.to_tensor(adata, enforce_single_slide=False) for adata in self.adatas]
 
     def _adata_to_genes_indices(self, adata: AnnData) -> Tensor:
-        return self.cell_embedder.genes_to_indices(adata.var_names[self._keep_var(adata)])[
-            None, :
-        ]  # ty: ignore[invalid-return-type]
+        return self.cell_embedder.genes_to_indices(adata.var_names)[None, :]  # ty: ignore[invalid-return-type]
 
-    def _keep_var(self, adata: AnnData) -> pd.Series:
-        return adata.var[Keys.USE_GENE]  # ty: ignore[invalid-return-type]
-
-    def _compute_means_stds(self) -> tuple[list[Tensor], list[Tensor], LabelEncoder]:
+    def _compute_means_stds(self) -> tuple[dict[str, Tensor], dict[str, Tensor]]:
         means, stds = {}, {}
 
         for adata in self.adatas:
             slide_ids = adata.obs[Keys.SLIDE_ID]
             for slide_id in slide_ids.cat.categories:
-                adata_slide = adata[adata.obs[Keys.SLIDE_ID] == slide_id, self._keep_var(adata)]
+                adata_slide: AnnData = adata[adata.obs[Keys.SLIDE_ID] == slide_id]
 
                 mean, var = stats.mean_var(adata_slide.X, axis=0)
                 mean, var = to_dense(mean, to_cpu_memory=True), to_dense(var, to_cpu_memory=True)
@@ -56,33 +49,27 @@ class ZScoreTorch:
                 means[slide_id] = mean.astype(np.float32)
                 stds[slide_id] = np.sqrt(var).astype(np.float32)
 
-        label_encoder = LabelEncoder()
-        label_encoder.fit(list(means.keys()))
+        return {slide_id: torch.tensor(_means) for slide_id, _means in means.items()}, {
+            slide_id: torch.tensor(_std) for slide_id, _std in stds.items()
+        }
 
-        means = [torch.tensor(means[slide_id]) for slide_id in label_encoder.classes_]
-        stds = [torch.tensor(stds[slide_id]) for slide_id in label_encoder.classes_]
-
-        return means, stds, label_encoder
-
-    def to_tensor(self, adata: AnnData) -> Tensor:
+    def to_tensor(self, adata: AnnData, enforce_single_slide: bool = True) -> Tensor:
         """Get the normalized gene expressions of the cells in the dataset.
         Only the genes of interest are kept (known genes and highly variable).
 
         Args:
             adata: An `AnnData` object.
+            enforce_single_slide: Whether we know for sure that the AnnData object corresponds to only one slide.
 
         Returns:
             A `Tensor` containing the normalized gene expresions.
         """
-        adata = adata[:, self._keep_var(adata)]
-
-        if len(np.unique(adata.obs[Keys.SLIDE_ID])) == 1:
-            slide_id_index = self.label_encoder.transform([adata.obs.iloc[0][Keys.SLIDE_ID]])[0]
-            mean, std = self.means[slide_id_index], self.stds[slide_id_index]
+        if enforce_single_slide or len(adata.obs[Keys.SLIDE_ID].unique()) == 1:
+            slide_id = adata.obs[Keys.SLIDE_ID].iloc[0]
+            mean, std = self.means_dict[slide_id], self.stds_dict[slide_id]
         else:
-            slide_id_indices = self.label_encoder.transform(adata.obs[Keys.SLIDE_ID])
-            mean = torch.stack([self.means[i] for i in slide_id_indices])  # TODO: avoid stack (only if not fast enough)
-            std = torch.stack([self.stds[i] for i in slide_id_indices])
+            mean = torch.stack([self.means_dict[slide_id] for slide_id in adata.obs[Keys.SLIDE_ID].values])
+            std = torch.stack([self.stds_dict[slide_id] for slide_id in adata.obs[Keys.SLIDE_ID].values])
 
         X = torch.tensor(to_dense(adata.X, to_cpu_memory=True), dtype=torch.float32)
         X = (X - mean) / (std + Nums.EPS)
