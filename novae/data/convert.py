@@ -24,16 +24,16 @@ class ZScoreTorch:
         self.adatas = [adata[:, adata.var[Keys.USE_GENE]] for adata in adatas]
         self.cell_embedder = cell_embedder
 
-        self.genes_indices_list = [self._adata_to_genes_indices(adata) for adata in self.adatas]
-        self.tensors = None
+        self.genes_indices_list = [  # ty: ignore[invalid-assignment]
+            self.cell_embedder.genes_to_indices(adata.var_names)[None, :] for adata in self.adatas
+        ]
 
         self.means_dict, self.stds_dict = self._compute_means_stds()
 
-        if not _use_lazy_loading(self.adatas):  # load tensors in memory for low numbers of elements (n_obs * n_vars)
+        if _use_lazy_loading(self.adatas):
+            self.tensors = None
+        else:  # load tensors in memory for low numbers of elements (n_obs * n_vars)
             self.tensors = [self.to_tensor(adata, enforce_single_slide=False) for adata in self.adatas]
-
-    def _adata_to_genes_indices(self, adata: AnnData) -> Tensor:
-        return self.cell_embedder.genes_to_indices(adata.var_names)[None, :]  # ty: ignore[invalid-return-type]
 
     def _compute_means_stds(self) -> tuple[dict[str, Tensor], dict[str, Tensor]]:
         means, stds = {}, {}

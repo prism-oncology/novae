@@ -6,6 +6,7 @@ import pytest
 
 import novae
 from novae._constants import Keys
+from novae.data import NovaeDataset
 from novae.utils._validate import log
 
 N_PANELS = 2
@@ -124,3 +125,20 @@ def test_uses_scale_to_microns():
     novae.settings.scale_to_microns = 1
 
     log.warning.assert_not_called()
+
+
+def test_single_slide_per_getitem():
+    novae.spatial_neighbors(adatas)
+
+    model = novae.Novae(adatas)
+
+    datamodule = model._init_datamodule(adatas)
+    dataloder = datamodule.train_dataloader()
+    dataset: NovaeDataset = dataloder.dataset
+
+    for i in range(len(dataset)):
+        adata_index, obs_index = dataset.shuffled_obs_ilocs[i]
+        adata = dataset.adatas[adata_index]
+        adjacency_local = adata.obsp[Keys.ADJ_LOCAL]  # ty: ignore[invalid-assignment]
+        obs_indices = adjacency_local[obs_index].indices
+        assert len(adata[obs_indices].obs[Keys.SLIDE_ID].unique()) == 1
