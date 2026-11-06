@@ -53,7 +53,7 @@ class ZScoreTorch:
             slide_id: torch.tensor(_std) for slide_id, _std in stds.items()
         }
 
-    def to_tensor(self, adata: AnnData, enforce_single_slide: bool = True) -> Tensor:
+    def to_tensor(self, adata: AnnData, enforce_single_slide: bool) -> Tensor:
         """Get the normalized gene expressions of the cells in the dataset.
         Only the genes of interest are kept (known genes and highly variable).
 
@@ -93,7 +93,7 @@ class ZScoreTorch:
         adata = self.adatas[adata_index]
         adata_view = adata[obs_indices]
 
-        return self.to_tensor(adata_view), self.genes_indices_list[adata_index]
+        return self.to_tensor(adata_view, enforce_single_slide=True), self.genes_indices_list[adata_index]
 
 
 class EmbeddingTorch:
